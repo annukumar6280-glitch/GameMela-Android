@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GameMelaBackend.initialize();
-  await GameMelaAds.initialize();
   runApp(const GameMelaApp());
 }
 
@@ -135,7 +134,7 @@ class HomeContent extends StatelessWidget {
         Expanded(child: StatCard(icon: Icons.emoji_events, label: 'Wins', value: '0')),
       ]),
       const SizedBox(height: 15),
-      const Text('Your progress and Coins sync with your player profile.', style: TextStyle(color: Colors.white38, fontSize: 11)),
+      const Text('Open Garage to create your player account and sync Coins and progress.', style: TextStyle(color: Colors.white38, fontSize: 11)),
       const GameMelaBannerAd(),
     ],
   );
