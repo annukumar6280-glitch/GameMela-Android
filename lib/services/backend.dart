@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class GameMelaBackend {
-  GameMelaBackend._();
 
   static const String _url = 'https://pvmmhoqurmbaiuumaltw.supabase.co';
   static const String _publishableKey = 'sb_publishable_Ee4L_yvqoJs-YEyUfNgOsg_o2IppwAq';
