@@ -32,6 +32,28 @@ jobs:
           if app is None:
               raise SystemExit("Android manifest has no application element")
           app.set(f"{{{android_ns}}}label", "GameMela")
+          # Route Supabase email confirmation links back into the Android app.
+          main_activity = next(
+              (item for item in app.findall("activity")
+               if item.get(f"{{{android_ns}}}name") in (".MainActivity", "com.gamemela.puzzleracing.MainActivity")),
+              None,
+          )
+          if main_activity is None:
+              raise SystemExit("Android MainActivity was not found")
+          callback = ET.SubElement(main_activity, "intent-filter")
+          ET.SubElement(callback, "action", {
+              f"{{{android_ns}}}name": "android.intent.action.VIEW"
+          })
+          ET.SubElement(callback, "category", {
+              f"{{{android_ns}}}name": "android.intent.category.DEFAULT"
+          })
+          ET.SubElement(callback, "category", {
+              f"{{{android_ns}}}name": "android.intent.category.BROWSABLE"
+          })
+          ET.SubElement(callback, "data", {
+              f"{{{android_ns}}}scheme": "com.gamemela.puzzleracing",
+              f"{{{android_ns}}}host": "login-callback"
+          })
           app.findall("meta-data")
           for item in list(app):
               if item.tag == "meta-data" and item.get(f"{{{android_ns}}}name") == "com.google.android.gms.ads.APPLICATION_ID":
