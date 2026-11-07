@@ -4,8 +4,29 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class GameMelaAds {
   GameMelaAds._();
+  static int _completedGames = 0;
   static Future<void> initialize() async {
     try { await MobileAds.instance.initialize(); } catch (_) {}
+  }
+
+  static void gameFinished() {
+    if (!Platform.isAndroid) return;
+    _completedGames++;
+    if (_completedGames % 3 != 0) return;
+    InterstitialAd.load(
+      adUnitId: 'ca-app-pub-3940256099942544/1033173712',
+      request: const AdRequest(),
+      adLoadCallback: InterstitialAdLoadCallback(
+        onAdLoaded: (ad) {
+          ad.fullScreenContentCallback = FullScreenContentCallback(
+            onAdDismissedFullScreenContent: (value) => value.dispose(),
+            onAdFailedToShowFullScreenContent: (value, error) => value.dispose(),
+          );
+          ad.show();
+        },
+        onAdFailedToLoad: (_) {},
+      ),
+    );
   }
 }
 
