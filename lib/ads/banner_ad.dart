@@ -10,13 +10,20 @@ class GameMelaAds {
   static Future<void>? _initialization;
   static Future<void> initialize() => _initialization ??= _initialize();
 
-  static String get _bannerUnitId => kDebugMode
+  // CI can build a debug-signed APK that uses the publisher's real ad unit IDs
+  // for controlled integration checks. Normal debug builds keep Google's test IDs.
+  static const bool _forceLiveAds = bool.fromEnvironment(
+    'GAMEMELA_USE_LIVE_ADS',
+    defaultValue: false,
+  );
+  static bool get _useTestAds => kDebugMode && !_forceLiveAds;
+  static String get _bannerUnitId => _useTestAds
       ? 'ca-app-pub-3940256099942544/9214589741'
       : 'ca-app-pub-9742595266312511/9826282800';
-  static String get _interstitialUnitId => kDebugMode
+  static String get _interstitialUnitId => _useTestAds
       ? 'ca-app-pub-3940256099942544/1033173712'
       : 'ca-app-pub-9742595266312511/4190812744';
-  static String get _rewardedUnitId => kDebugMode
+  static String get _rewardedUnitId => _useTestAds
       ? 'ca-app-pub-3940256099942544/5224354917'
       : 'ca-app-pub-9742595266312511/1824715882';
   static Future<void> _initialize() async {
