@@ -147,8 +147,10 @@ class RaceGame extends StatefulWidget {
 class _RaceGameState extends State<RaceGame>{
   final _rng=Random();final List<_Traffic> traffic=[];
   Timer? timer;int lane=1,score=0,best=0,level=1;double roadShift=0;
-  bool running=false,crashed=false,paused=false,nitro=false;int nitroTicks=0;
+  bool running=false,crashed=false,paused=false,nitro=false;int nitroTicks=0;String ownedModel='';int vehicleHealth=100;
   static const _colors=[Color(0xFFFF5353),Color(0xFF38C8F2),Color(0xFFAA83FF),Color(0xFFFFB347),Color(0xFFECEFF4)];
+  @override void initState(){super.initState();_loadOwnedRide();}
+  Future<void> _loadOwnedRide() async {try{final list=await GameMelaBackend.loadVehicles();final found=list.where((v)=>v['vehicle_type']==widget.vehicle.toLowerCase()).toList();if(found.isNotEmpty&&mounted){setState((){ownedModel=(found.first['model_id']??'').toString();vehicleHealth=(found.first['durability'] as num?)?.toInt()??100;});}}catch(_){}}
   void start(){
     timer?.cancel();setState((){lane=1;score=0;level=1;roadShift=0;traffic.clear();running=true;crashed=false;paused=false;nitro=false;nitroTicks=0;});
     timer=Timer.periodic(const Duration(milliseconds:45),(_)=>_tick());
@@ -173,6 +175,7 @@ class _RaceGameState extends State<RaceGame>{
     Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
       _raceStat('DISTANCE',score.toString()+'m'),_raceStat('LEVEL',level.toString()),_raceStat('BEST',best.toString()+'m'),
       IconButton.filledTonal(onPressed:running?()=>setState(()=>paused=!paused):null,icon:Icon(paused?Icons.play_arrow:Icons.pause))]),
+    if(ownedModel.isNotEmpty)Padding(padding:const EdgeInsets.only(bottom:8),child:Row(children:[Icon(widget.vehicle.toLowerCase()=='bike'?Icons.two_wheeler:Icons.directions_car,color:_gold,size:18),const SizedBox(width:7),Text('YOUR RIDE  '+ownedModel.toUpperCase(),style:const TextStyle(color:_gold,fontSize:11,fontWeight:FontWeight.w900)),const Spacer(),Text('CONDITION  '+vehicleHealth.toString()+'%',style:const TextStyle(color:Colors.white60,fontSize:10))])),
     const SizedBox(height:10),
     Expanded(child:ClipRRect(borderRadius:BorderRadius.circular(22),child:Stack(fit:StackFit.expand,children:[
       CustomPaint(painter:_ProRoadPainter(lane,traffic,roadShift,widget.vehicle.toLowerCase()=='bike',nitro)),
