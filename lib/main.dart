@@ -212,6 +212,9 @@ class _GarageContentState extends State<GarageContent> {
       const Text('Build your dream ride', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
       const SizedBox(height: 14),
       ValueListenableBuilder<int>(valueListenable: GameMelaBackend.coins, builder: (_, value, __) => Align(alignment: Alignment.centerLeft, child: CoinPill(value: value))),
+      const SizedBox(height: 12),
+      if (!GameMelaBackend.ready) _AccountPanel(onConnected: _load)
+      else Row(children: [const Icon(Icons.cloud_done, color: Colors.greenAccent, size: 18), const SizedBox(width: 6), const Expanded(child: Text('Cloud account connected', style: TextStyle(color: Colors.greenAccent, fontSize: 12))), TextButton(onPressed: () async { await GameMelaBackend.signOut(); await _load(); }, child: const Text('SIGN OUT'))]),
       const SizedBox(height: 16),
       SegmentedButton<String>(
         segments: const [
@@ -297,6 +300,66 @@ class _GarageContentState extends State<GarageContent> {
       ]),
     );
   }
+}
+
+
+class _AccountPanel extends StatefulWidget {
+  final VoidCallback onConnected;
+  const _AccountPanel({required this.onConnected});
+  @override
+  State<_AccountPanel> createState() => _AccountPanelState();
+}
+
+class _AccountPanelState extends State<_AccountPanel> {
+  final email = TextEditingController();
+  final password = TextEditingController();
+  bool creating = true;
+  bool busy = false;
+
+  @override
+  void dispose() { email.dispose(); password.dispose(); super.dispose(); }
+
+  Future<void> submit() async {
+    if (email.text.trim().isEmpty || password.text.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter your email and a password with at least 6 characters.')));
+      return;
+    }
+    setState(() => busy = true);
+    try {
+      if (creating) {
+        final connected = await GameMelaBackend.signUp(email.text, password.text);
+        if (!connected && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Account created. Check your email to confirm it, then sign in here.')));
+          setState(() => creating = false);
+        } else if (connected) {
+          widget.onConnected();
+        }
+      } else {
+        await GameMelaBackend.signIn(email.text, password.text);
+        widget.onConnected();
+      }
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))));
+    } finally { if (mounted) setState(() => busy = false); }
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(17), border: Border.all(color: gold.withValues(alpha: .22))),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Text(creating ? 'SAVE YOUR GAME PROGRESS' : 'WELCOME BACK', style: const TextStyle(color: gold, fontWeight: FontWeight.w900, letterSpacing: 1)),
+      const SizedBox(height: 5),
+      const Text('Create an account to keep Coins, scores and vehicles safe across sessions.', style: TextStyle(color: Colors.white60, fontSize: 12)),
+      const SizedBox(height: 12),
+      TextField(controller: email, keyboardType: TextInputType.emailAddress, autocorrect: false, decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined))),
+      const SizedBox(height: 9),
+      TextField(controller: password, obscureText: true, decoration: const InputDecoration(labelText: 'Password (6+ characters)', prefixIcon: Icon(Icons.lock_outline))),
+      const SizedBox(height: 12),
+      FilledButton(onPressed: busy ? null : submit, child: Text(busy ? 'PLEASE WAIT...' : creating ? 'CREATE ACCOUNT' : 'SIGN IN')),
+      TextButton(onPressed: busy ? null : () => setState(() => creating = !creating), child: Text(creating ? 'Already have an account? Sign in' : 'New player? Create an account')),
+    ]),
+  );
 }
 
 class GameCard extends StatelessWidget {
