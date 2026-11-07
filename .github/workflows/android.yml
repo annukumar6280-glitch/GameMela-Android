@@ -74,7 +74,7 @@ jobs:
           sudo mv Godot_v4.3-stable_linux.x86_64 /usr/local/bin/godot
           godot --headless --editor --path bike_simulator --quit
           mkdir -p android/app/src/main/assets
-          godot --headless --path bike_simulator --export-pack "Android" android/app/src/main/assets/bike_simulator.pck
+          godot --headless --path bike_simulator --export-pack "Android" "$GITHUB_WORKSPACE/android/app/src/main/assets/bike_simulator.pck"
           python3 tooling/configure_godot_android_embedding.py
       - name: Run tests
         run: flutter test
