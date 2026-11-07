@@ -31,7 +31,11 @@ class GameMelaBackend {
   }
 
   static Future<bool> signUp(String email, String password) async {
-    final response = await client.auth.signUp(email: email.trim(), password: password);
+    final response = await client.auth.signUp(
+      email: email.trim(),
+      password: password,
+      emailRedirectTo: 'com.gamemela.puzzleracing://login-callback/',
+    );
     ready = response.session != null && client.auth.currentUser != null;
     if (ready) await refreshCoins();
     return ready;
