@@ -20,7 +20,13 @@ jobs:
       - name: Get packages
         run: flutter pub get
       - name: Create Android platform files
-        run: flutter create --platforms=android --project-name game_mela .
+        run: |
+          flutter create --platforms=android --org com.gamemela --project-name puzzleracing .
+          sed -i 's/android:label="[^"]*"/android:label="GameMela"/' android/app/src/main/AndroidManifest.xml
+          sed -i '/<application/a\        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713" />' android/app/src/main/AndroidManifest.xml
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
+      - name: Run tests
+        run: flutter test
       - name: Analyze
         run: flutter analyze
       - name: Build debug APK
