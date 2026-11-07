@@ -3,14 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 class GameMelaAds {
-  GameMelaAds._();
   static int _completedGames = 0;
-  static Future<void> initialize() async {
-    try { await MobileAds.instance.initialize(); } catch (_) {}
+  static bool _initialized = false;
+  static Future<void>? _initialization;
+  static Future<void> initialize() => _initialization ??= _initialize();
+  static Future<void> _initialize() async {
+    try { await MobileAds.instance.initialize(); _initialized = true; } catch (_) {}
   }
 
   static void gameFinished() {
-    if (!Platform.isAndroid) return;
+    if (!Platform.isAndroid || !_initialized) return;
     _completedGames++;
     if (_completedGames % 3 != 0) return;
     InterstitialAd.load(
@@ -44,6 +46,11 @@ class _GameMelaBannerAdState extends State<GameMelaBannerAd> {
   void initState() {
     super.initState();
     if (!Platform.isAndroid) return;
+    GameMelaAds.initialize().then((_) { if (mounted) _loadAd(); });
+  }
+
+  void _loadAd() {
+    if (!mounted) return;
     ad = BannerAd(
       adUnitId: 'ca-app-pub-3940256099942544/6300978111',
       size: AdSize.banner,
