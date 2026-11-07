@@ -107,11 +107,23 @@ class GameMelaBackend {
 
   static Future<void> saveProgress(String gameKey, int score, {int level = 1}) async {
     if (!ready) return;
+    final userId = client.auth.currentUser!.id;
+    final previous = await client.from('game_progress')
+        .select('best_score,level')
+        .eq('user_id', userId)
+        .eq('game_key', gameKey)
+        .maybeSingle();
+    final bestScore = score > ((previous?['best_score'] as num?)?.toInt() ?? 0)
+        ? score
+        : ((previous?['best_score'] as num?)?.toInt() ?? 0);
+    final bestLevel = level > ((previous?['level'] as num?)?.toInt() ?? 1)
+        ? level
+        : ((previous?['level'] as num?)?.toInt() ?? 1);
     await client.from('game_progress').upsert({
-      'user_id': client.auth.currentUser!.id,
+      'user_id': userId,
       'game_key': gameKey,
-      'level': level,
-      'best_score': score,
+      'level': bestLevel,
+      'best_score': bestScore,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     }, onConflict: 'user_id,game_key');
   }
