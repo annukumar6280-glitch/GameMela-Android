@@ -70,11 +70,11 @@ class _QuizGameState extends State<QuizGame> {
   bool finished = false;
   @override
   Widget build(BuildContext context) {
-    if (finished) return _GameScaffold('Quiz Challenge', Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+    if (finished) { return _GameScaffold('Quiz Challenge', Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
       const Icon(Icons.emoji_events, color: _gold, size: 64), const SizedBox(height: 12),
       Text('Your score: $score / ${questions.length}', style: const TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
       const SizedBox(height: 18), FilledButton(onPressed: () => setState(() { index=0; score=0; finished=false; }), child: const Text('Try Again')),
-    ])));
+    ]))); }
     final q = questions[index];
     return _GameScaffold('Quiz Challenge', Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Text('QUESTION ${index+1} OF ${questions.length}', style: const TextStyle(color: _gold, letterSpacing: 2)),
