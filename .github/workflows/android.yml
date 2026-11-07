@@ -22,8 +22,27 @@ jobs:
       - name: Create Android platform files
         run: |
           flutter create --platforms=android --org com.gamemela --project-name puzzleracing .
-          sed -i 's/android:label="[^"]*"/android:label="GameMela"/' android/app/src/main/AndroidManifest.xml
-          sed -i '/<application/a\        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-9742595266312511~1432787462" />' android/app/src/main/AndroidManifest.xml
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          manifest = "android/app/src/main/AndroidManifest.xml"
+          android_ns = "http://schemas.android.com/apk/res/android"
+          ET.register_namespace("android", android_ns)
+          tree = ET.parse(manifest)
+          app = tree.getroot().find("application")
+          if app is None:
+              raise SystemExit("Android manifest has no application element")
+          app.set(f"{{{android_ns}}}label", "GameMela")
+          app.findall("meta-data")
+          for item in list(app):
+              if item.tag == "meta-data" and item.get(f"{{{android_ns}}}name") == "com.google.android.gms.ads.APPLICATION_ID":
+                  app.remove(item)
+          ET.SubElement(app, "meta-data", {
+              f"{{{android_ns}}}name": "com.google.android.gms.ads.APPLICATION_ID",
+              f"{{{android_ns}}}value": "ca-app-pub-9742595266312511~1432787462"
+          })
+          tree.write(manifest, encoding="utf-8", xml_declaration=True)
+          ET.parse(manifest)
+          PY
           sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
       - name: Run tests
         run: flutter test
