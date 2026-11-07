@@ -126,7 +126,7 @@ class _NumberPuzzleGameState extends State<NumberPuzzleGame>{
   List<int> tiles=[1,2,3,4,5,6,7,8,0];
   int moves=0;
   void shuffle(){ tiles=[1,2,3,4,5,6,7,8,0]; for(var i=0;i<100;i++){ final blank=tiles.indexOf(0); final opts=[blank-3,blank+3, if(blank%3>0) blank-1, if(blank%3<2) blank+1].where((x)=>x>=0&&x<9).toList(); final target=opts[Random().nextInt(opts.length)]; tiles[blank]=tiles[target]; tiles[target]=0; } moves=0; }
-  void tap(int i){ final b=tiles.indexOf(0); if((i-b).abs()==3 || (i~/3==b~/3 && (i-b).abs()==1)){ setState(()=>{tiles[b]=tiles[i],tiles[i]=0,moves++}); } }
+  void tap(int i){ final b=tiles.indexOf(0); if((i-b).abs()==3 || (i~/3==b~/3 && (i-b).abs()==1)){ setState(() { tiles[b]=tiles[i]; tiles[i]=0; moves++; }); } }
   bool get solved=>tiles.join()== '123456780';
   @override
   Widget build(BuildContext context)=>_GameScaffold('Number Puzzle',Column(children:[
@@ -138,7 +138,7 @@ class _NumberPuzzleGameState extends State<NumberPuzzleGame>{
 
 class WordPuzzleGame extends StatefulWidget { const WordPuzzleGame({super.key}); @override State<WordPuzzleGame> createState()=>_WordPuzzleGameState(); }
 class _WordPuzzleGameState extends State<WordPuzzleGame>{
-  final words=[('ELPPA','APPLE'),('NAROBI','BRAIN'),('GNIRAC','RACING'),('ZZULPE','PUZZLE'),('DOLG','GOLD')];
+  final words=[('ELPPA','APPLE'),('NIARB','BRAIN'),('GNIRAC','RACING'),('ZZULPE','PUZZLE'),('DOLG','GOLD')];
   int index=0,score=0; final answer=TextEditingController(); String message='';
   @override void dispose(){answer.dispose();super.dispose();}
   void check(){if(answer.text.trim().toUpperCase()==words[index].$2){score++;message='Correct!';}else{message='Not quite. Try again.';} setState((){});}
@@ -164,7 +164,7 @@ class _RaceGameState extends State<RaceGame>{
   @override void dispose(){timer?.cancel();super.dispose();}
   @override Widget build(BuildContext context)=>_GameScaffold('${widget.vehicle} Racing',Column(children:[
     Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[Text('Distance: $score',style:const TextStyle(color:_gold)),Text('Coins: $coins',style:const TextStyle(color:_gold))]),
-    const SizedBox(height:16),Expanded(child:GestureDetector(onHorizontalDragEnd:(d)=>setState(()=>lane=(lane+(d.primaryVelocity??0)<0?-1:1).clamp(0,2)),child:Container(decoration:BoxDecoration(color:const Color(0xFF202B3A),borderRadius:BorderRadius.circular(20)),child:CustomPaint(painter:_RoadPainter(lane,obstacles,widget.vehicle),child:const SizedBox.expand())))),
+    const SizedBox(height:16),Expanded(child:GestureDetector(onHorizontalDragEnd:(d)=>setState(()=>lane=(lane+((d.primaryVelocity??0)<0?-1:1)).clamp(0,2).toInt()),child:Container(decoration:BoxDecoration(color:const Color(0xFF202B3A),borderRadius:BorderRadius.circular(20)),child:CustomPaint(painter:_RoadPainter(lane,obstacles,widget.vehicle),child:const SizedBox.expand())))),
     const SizedBox(height:12),if(crashed) const Text('Crash! Tap race again.',style:TextStyle(color:Colors.orangeAccent)),
     FilledButton(onPressed:running?null:start,child:Text(running?'RACING...':'START RACE')),
     const Text('Swipe left or right to change lanes and avoid traffic.',style:TextStyle(color:Colors.white54,fontSize:12)),
