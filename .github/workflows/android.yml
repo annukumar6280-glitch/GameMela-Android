@@ -23,7 +23,7 @@ jobs:
         run: |
           flutter create --platforms=android --org com.gamemela --project-name puzzleracing .
           sed -i 's/android:label="[^"]*"/android:label="GameMela"/' android/app/src/main/AndroidManifest.xml
-          sed -i '/<application/a\        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713" />' android/app/src/main/AndroidManifest.xml
+          sed -i '/<application/a\        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-9742595266312511~1432787462" />' android/app/src/main/AndroidManifest.xml
           sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
       - name: Run tests
         run: flutter test
