@@ -43,6 +43,8 @@ const games = <GameInfo>[
   GameInfo('Memory Match', 'Match the hidden pairs', '🃏', Color(0xFFF472B6)),
   GameInfo('Number Puzzle', 'Train your brain', '🔢', Color(0xFF34D399)),
   GameInfo('Word Puzzle', 'Find the hidden words', '🔤', Color(0xFFFBBF24)),
+  GameInfo('Color Sort', 'Sort colours • Relax your mind', '🧪', Color(0xFF34D399)),
+  GameInfo('Stack Rush', 'Build the tallest tower', '🧱', Color(0xFFFB923C)),
   GameInfo('Bike Racing', 'Race on two wheels', '🏍️', Color(0xFFFB923C)),
   GameInfo('Car Racing', 'Own the track', '🏎️', Color(0xFF60A5FA)),
 ];
@@ -128,7 +130,7 @@ class HomeContent extends StatelessWidget {
       const SectionTitle('Your journey', 'More adventures ahead'),
       const SizedBox(height: 12),
       const Row(children: [
-        Expanded(child: StatCard(icon: Icons.sports_esports, label: 'Games', value: '7')),
+        Expanded(child: StatCard(icon: Icons.sports_esports, label: 'Games', value: '9')),
         SizedBox(width: 10),
         Expanded(child: StatCard(icon: Icons.local_fire_department, label: 'Streak', value: '0 days')),
         SizedBox(width: 10),
