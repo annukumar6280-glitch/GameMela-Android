@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../services/backend.dart';
+import '../ads/banner_ad.dart';
 
 const _gold = Color(0xFFFFC857);
 const _panel = Color(0xFF141E33);
@@ -46,6 +47,7 @@ class _BubblePopGameState extends State<BubblePopGame> {
       rewarded = true;
       GameMelaBackend.claimReward('bubble_pop', score);
       GameMelaBackend.saveProgress('bubble_pop', score);
+      GameMelaAds.gameFinished();
     }
   }
   @override
@@ -86,6 +88,7 @@ class _QuizGameState extends State<QuizGame> {
       rewarded = true;
       GameMelaBackend.claimReward('quiz', score);
       GameMelaBackend.saveProgress('quiz', score);
+      GameMelaAds.gameFinished();
     }
   }
   @override
@@ -127,7 +130,7 @@ class _MemoryGameState extends State<MemoryGame> {
   void _tap(int i) {
     if (opened.length == 2 || opened.contains(i) || matched.contains(i)) return;
     setState(() { opened.add(i); if (opened.length == 2) { moves++; if (symbols[order[opened[0]]] == symbols[order[opened[1]]]) { matched.addAll(opened); opened.clear(); } else { Future.delayed(const Duration(milliseconds:750), () { if(mounted) setState(()=>opened.clear()); }); } } });
-    if (matched.length == 8 && !rewarded) { rewarded=true; GameMelaBackend.claimReward('memory',40); GameMelaBackend.saveProgress('memory',moves); }
+    if (matched.length == 8 && !rewarded) { rewarded=true; GameMelaBackend.claimReward('memory',40); GameMelaBackend.saveProgress('memory',moves);GameMelaAds.gameFinished(); }
   }
   @override
   Widget build(BuildContext context) => _GameScaffold('Memory Match', Column(children: [
@@ -149,7 +152,7 @@ class _NumberPuzzleGameState extends State<NumberPuzzleGame>{
   int moves=0;
   bool rewarded=false;
   void shuffle(){ tiles=[1,2,3,4,5,6,7,8,0]; for(var i=0;i<100;i++){ final blank=tiles.indexOf(0); final opts=[blank-3,blank+3, if(blank%3>0) blank-1, if(blank%3<2) blank+1].where((x)=>x>=0&&x<9).toList(); final target=opts[Random().nextInt(opts.length)]; tiles[blank]=tiles[target]; tiles[target]=0; } moves=0; rewarded=false; }
-  void tap(int i){ final b=tiles.indexOf(0); if((i-b).abs()==3 || (i~/3==b~/3 && (i-b).abs()==1)){ setState(() { tiles[b]=tiles[i]; tiles[i]=0; moves++; }); if(solved && !rewarded){rewarded=true;GameMelaBackend.claimReward('number_puzzle',100);GameMelaBackend.saveProgress('number_puzzle',moves);} } }
+  void tap(int i){ final b=tiles.indexOf(0); if((i-b).abs()==3 || (i~/3==b~/3 && (i-b).abs()==1)){ setState(() { tiles[b]=tiles[i]; tiles[i]=0; moves++; }); if(solved && !rewarded){rewarded=true;GameMelaBackend.claimReward('number_puzzle',100);GameMelaBackend.saveProgress('number_puzzle',moves);GameMelaAds.gameFinished();} } }
   bool get solved=>tiles.join()== '123456780';
   @override
   Widget build(BuildContext context)=>_GameScaffold('Number Puzzle',Column(children:[
@@ -164,7 +167,7 @@ class _WordPuzzleGameState extends State<WordPuzzleGame>{
   final words=[('ELPPA','APPLE'),('NIARB','BRAIN'),('GNIRAC','RACING'),('ZZULPE','PUZZLE'),('DOLG','GOLD')];
   int index=0,score=0; final answer=TextEditingController(); String message=''; bool rewarded=false;
   @override void dispose(){answer.dispose();super.dispose();}
-  void check(){if(answer.text.trim().toUpperCase()==words[index].$2){score++;message='Correct!';if(score>=5&&!rewarded){rewarded=true;GameMelaBackend.claimReward('word_puzzle',50);GameMelaBackend.saveProgress('word_puzzle',score);}}else{message='Not quite. Try again.';} setState((){});}
+  void check(){if(answer.text.trim().toUpperCase()==words[index].$2){score++;message='Correct!';if(score>=5&&!rewarded){rewarded=true;GameMelaBackend.claimReward('word_puzzle',50);GameMelaBackend.saveProgress('word_puzzle',score);GameMelaAds.gameFinished();}}else{message='Not quite. Try again.';} setState((){});}
   void next(){setState((){index=(index+1)%words.length;answer.clear();message='';});}
   @override Widget build(BuildContext context)=>_GameScaffold('Word Puzzle',Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
     Text('Score: $score',style:const TextStyle(color:_gold,fontSize:20)),const SizedBox(height:30),
@@ -183,7 +186,7 @@ class RaceGame extends StatefulWidget {
 }
 class _RaceGameState extends State<RaceGame>{
   int lane=1,score=0,coins=0; bool running=false,crashed=false,rewarded=false; Timer? timer; final obstacles=<int>[];
-  void start(){timer?.cancel();setState((){lane=1;score=0;coins=0;obstacles.clear();running=true;crashed=false;rewarded=false;});timer=Timer.periodic(const Duration(milliseconds:650),(_){if(!mounted)return;setState((){for(var i=0;i<obstacles.length;i++){obstacles[i]-=3;}obstacles.removeWhere((x)=>x<0);if(Random().nextDouble()<.55)obstacles.add(12+Random().nextInt(3));score++;coins=score~/10;if(obstacles.any((x)=>x<=1 && (x%3)==lane)){running=false;crashed=true;timer?.cancel();if(!rewarded&&score>=10){rewarded=true;GameMelaBackend.claimReward(widget.vehicle.toLowerCase()=='bike'?'bike_race':'car_race',score);GameMelaBackend.saveProgress(widget.vehicle.toLowerCase()=='bike'?'bike_race':'car_race',score);}}});});}
+  void start(){timer?.cancel();setState((){lane=1;score=0;coins=0;obstacles.clear();running=true;crashed=false;rewarded=false;});timer=Timer.periodic(const Duration(milliseconds:650),(_){if(!mounted)return;setState((){for(var i=0;i<obstacles.length;i++){obstacles[i]-=3;}obstacles.removeWhere((x)=>x<0);if(Random().nextDouble()<.55)obstacles.add(12+Random().nextInt(3));score++;coins=score~/10;if(obstacles.any((x)=>x<=1 && (x%3)==lane)){running=false;crashed=true;timer?.cancel();if(!rewarded&&score>=10){rewarded=true;GameMelaBackend.claimReward(widget.vehicle.toLowerCase()=='bike'?'bike_race':'car_race',score);GameMelaBackend.saveProgress(widget.vehicle.toLowerCase()=='bike'?'bike_race':'car_race',score);GameMelaAds.gameFinished();}}});});}
   @override void dispose(){timer?.cancel();super.dispose();}
   @override Widget build(BuildContext context)=>_GameScaffold('${widget.vehicle} Racing',Column(children:[
     Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[Text('Distance: $score',style:const TextStyle(color:_gold)),Text('Coins: $coins',style:const TextStyle(color:_gold))]),
