@@ -75,119 +75,49 @@ class _BubblePopGameState extends State<BubblePopGame> {
 }
 Widget _bubbleHud(String label,String value)=>Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:9),decoration:BoxDecoration(color:_panel,borderRadius:BorderRadius.circular(13),border:Border.all(color:Colors.white12)),child:Column(children:[Text(label,style:const TextStyle(color:Colors.white54,fontSize:9,fontWeight:FontWeight.bold)),Text(value,style:const TextStyle(color:_gold,fontSize:16,fontWeight:FontWeight.w900))]));
 
-class QuizGame extends StatefulWidget {
-  const QuizGame({super.key});
-  @override
-  State<QuizGame> createState() => _QuizGameState();
+class QuizGame extends StatefulWidget { const QuizGame({super.key}); @override State<QuizGame> createState()=>_QuizGameState(); }
+class _QuizGameState extends State<QuizGame>{
+ static const bank=[
+ ('Which planet is called the Red Planet?',['Venus','Mars','Jupiter','Mercury'],1),('How many sides has a hexagon?',['5','6','7','8'],1),('Largest mammal on Earth?',['Elephant','Blue whale','Giraffe','Shark'],1),('What is 12 x 8?',['86','92','96','108'],2),('Plants absorb which gas?',['Oxygen','Nitrogen','Carbon dioxide','Hydrogen'],2),
+ ('Fastest land animal?',['Lion','Cheetah','Horse','Tiger'],1),('How many continents?',['5','6','7','8'],2),('Capital of Japan?',['Seoul','Beijing','Tokyo','Bangkok'],2),('Largest ocean?',['Atlantic','Indian','Arctic','Pacific'],3),('How many rainbow colours?',['5','6','7','8'],2),
+ ('Which organ pumps blood?',['Lungs','Heart','Brain','Kidney'],1),('15 squared?',['125','200','225','250'],2),('Liquid metal at room temperature?',['Iron','Mercury','Copper','Gold'],1),('Who wrote Romeo and Juliet?',['Dickens','Shakespeare','Austen','Tolkien'],1),('Nearest star to Earth?',['Sirius','Sun','Polaris','Vega'],1),
+ ('Players in a football team on field?',['9','10','11','12'],2),('Chemical formula of water?',['CO2','O2','H2O','NaCl'],2),('Ship of the desert?',['Horse','Camel','Donkey','Yak'],1),('144 divided by 12?',['10','11','12','14'],2),('Pyramids of Giza are in?',['Greece','Egypt','Mexico','India'],1)
+ ];
+ late List<(String,List<String>,int)> round; int index=0,score=0,streak=0,bestStreak=0; int? selected; bool answered=false,finished=false;
+ @override void initState(){super.initState();_newRound();}
+ void _newRound(){final pool=[...bank]..shuffle();setState((){round=pool.take(10).toList();index=0;score=0;streak=0;bestStreak=0;selected=null;answered=false;finished=false;});}
+ void _answer(int choice){if(answered||finished)return;final correct=round[index].$3;setState((){selected=choice;answered=true;if(choice==correct){streak++;score+=10+(streak>=3?5:0);}else{streak=0;}if(streak>bestStreak)bestStreak=streak;});}
+ void _next(){if(index==round.length-1){setState(()=>finished=true);GameMelaBackend.claimReward('quiz',score);GameMelaBackend.saveProgress('quiz',score);GameMelaAds.gameFinished();}else{setState((){index++;selected=null;answered=false;});}}
+ @override Widget build(BuildContext context){if(finished)return _GameScaffold('Quiz Challenge',Center(child:Column(mainAxisSize:MainAxisSize.min,children:[const Icon(Icons.emoji_events_rounded,color:_gold,size:70),const SizedBox(height:12),const Text('ROUND COMPLETE',style:TextStyle(fontSize:23,fontWeight:FontWeight.w900)),Text(score.toString()+' / 100 points',style:const TextStyle(color:_gold,fontSize:25,fontWeight:FontWeight.w900)),Text('Best streak: '+bestStreak.toString(),style:const TextStyle(color:Colors.white60)),const SizedBox(height:20),FilledButton.icon(onPressed:_newRound,icon:const Icon(Icons.replay),label:const Text('PLAY AGAIN'))])));
+ final q=round[index];return _GameScaffold('Quiz Challenge',Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text('QUESTION '+(index+1).toString()+'/10',style:const TextStyle(color:_gold,fontWeight:FontWeight.w900)),Text('SCORE '+score.toString(),style:const TextStyle(color:_gold,fontWeight:FontWeight.bold))]),const SizedBox(height:9),LinearProgressIndicator(value:(index+1)/10,minHeight:6,color:_gold,backgroundColor:Colors.white12),const SizedBox(height:24),Text(q.$1,style:const TextStyle(fontSize:23,fontWeight:FontWeight.w800)),const SizedBox(height:20),...List.generate(4,(i){final correct=i==q.$3;final chosen=i==selected;return Padding(padding:const EdgeInsets.only(bottom:10),child:OutlinedButton(style:OutlinedButton.styleFrom(backgroundColor:answered&&correct?Colors.green.withValues(alpha:.25):answered&&chosen?Colors.red.withValues(alpha:.2):_panel,padding:const EdgeInsets.symmetric(vertical:15,horizontal:12),alignment:Alignment.centerLeft),onPressed:answered?null:()=>_answer(i),child:Text(String.fromCharCode(65+i)+'.  '+q.$2[i],style:const TextStyle(fontSize:16,color:Colors.white))));}),const Spacer(),if(answered)Text(selected==q.$3?'Correct! Great job.':'Correct answer: '+q.$2[q.$3],style:TextStyle(color:selected==q.$3?Colors.greenAccent:Colors.orangeAccent,fontWeight:FontWeight.bold)),const SizedBox(height:10),FilledButton(onPressed:answered?_next:null,child:Text(index==9?'FINISH ROUND':'NEXT QUESTION'))]));}
 }
-class _QuizGameState extends State<QuizGame> {
-  final questions = const [
-    ('Which planet is known as the Red Planet?', ['Venus','Mars','Jupiter','Mercury'], 1),
-    ('How many sides does a hexagon have?', ['Five','Six','Seven','Eight'], 1),
-    ('Which animal is the largest mammal?', ['Elephant','Blue whale','Giraffe','Shark'], 1),
-    ('What is 9 × 7?', ['56','63','72','49'], 1),
-    ('Which gas do plants absorb?', ['Oxygen','Nitrogen','Carbon dioxide','Hydrogen'], 2),
-  ];
-  int index = 0, score = 0;
-  bool finished = false;
-  bool rewarded = false;
-  void answer(int choice) {
-    setState(() { if (choice == questions[index].$3) score++; index++; if (index == questions.length) finished = true; });
-    if (finished && !rewarded) {
-      rewarded = true;
-      GameMelaBackend.claimReward('quiz', score);
-      GameMelaBackend.saveProgress('quiz', score);
-      GameMelaAds.gameFinished();
-    }
-  }
-  @override
-  Widget build(BuildContext context) {
-    if (finished) { return _GameScaffold('Quiz Challenge', Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      const Icon(Icons.emoji_events, color: _gold, size: 64), const SizedBox(height: 12),
-      Text('Your score: $score / ${questions.length}', style: const TextStyle(fontSize: 25, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 18), FilledButton(onPressed: () => setState(() { index=0; score=0; finished=false; rewarded=false; }), child: const Text('Try Again')),
-    ]))); }
-    final q = questions[index];
-    return _GameScaffold('Quiz Challenge', Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text('QUESTION ${index+1} OF ${questions.length}', style: const TextStyle(color: _gold, letterSpacing: 2)),
-      const SizedBox(height: 18), Text(q.$1, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 20),
-      ...List.generate(4, (i) => Padding(padding: const EdgeInsets.only(bottom: 10), child: FilledButton.tonal(
-        onPressed: () => answer(i),
-        child: Padding(padding: const EdgeInsets.all(10), child: Text(q.$2[i], style: const TextStyle(fontSize: 16))),
-      ))),
-      const Spacer(), Text('Correct answers: $score', textAlign: TextAlign.center, style: const TextStyle(color: _gold)),
-    ]));
-  }
+class MemoryGame extends StatefulWidget { const MemoryGame({super.key}); @override State<MemoryGame> createState()=>_MemoryGameState(); }
+class _MemoryGameState extends State<MemoryGame>{
+ static const symbols=['🍀','🚀','🎸','🐼','🍉','🦊','⚽','🌈']; late List<int> order;final opened=<int>[];final matched=<int>{};int moves=0;bool locked=false,rewarded=false;
+ @override void initState(){super.initState();_shuffle();}
+ void _shuffle(){order=[...List.generate(8,(i)=>i),...List.generate(8,(i)=>i)]..shuffle();opened.clear();matched.clear();moves=0;locked=false;rewarded=false;}
+ void _tap(int i){if(locked||opened.contains(i)||matched.contains(i))return;setState(()=>opened.add(i));if(opened.length==2){moves++;final a=opened[0],b=opened[1];if(order[a]==order[b]){setState(()=>{matched.add(a);matched.add(b);opened.clear();});if(matched.length==16&&!rewarded){rewarded=true;GameMelaBackend.claimReward('memory',80);GameMelaBackend.saveProgress('memory',moves);GameMelaAds.gameFinished();}}else{locked=true;Future.delayed(const Duration(milliseconds:750),(){if(mounted)setState(()=>{opened.clear();locked=false;});});}}}
+ @override Widget build(BuildContext context)=>_GameScaffold('Memory Match',Column(children:[Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text('MOVES  '+moves.toString(),style:const TextStyle(color:_gold,fontWeight:FontWeight.w900)),Text('PAIRS  '+(matched.length~/2).toString()+'/8',style:const TextStyle(color:_gold,fontWeight:FontWeight.w900))]),const SizedBox(height:12),LinearProgressIndicator(value:matched.length/16,minHeight:6,color:_gold,backgroundColor:Colors.white12),const SizedBox(height:14),Expanded(child:GridView.builder(itemCount:16,gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:4,crossAxisSpacing:9,mainAxisSpacing:9,childAspectRatio:.9),itemBuilder:(c,i){final face=matched.contains(i)||opened.contains(i);return InkWell(onTap:()=>_tap(i),borderRadius:BorderRadius.circular(14),child:AnimatedContainer(duration:const Duration(milliseconds:180),decoration:BoxDecoration(gradient:face?const LinearGradient(colors:[Color(0xFF344E78),Color(0xFF1B3152)]):const LinearGradient(colors:[Color(0xFF263D60),Color(0xFF111D32)]),borderRadius:BorderRadius.circular(14),border:Border.all(color:matched.contains(i)?Colors.greenAccent:_gold.withValues(alpha:.3))),alignment:Alignment.center,child:Text(face?symbols[order[i]]:'?',style:TextStyle(fontSize:face?29:32,fontWeight:FontWeight.w900,color:face?Colors.white:_gold))));})),if(matched.length==16)const Text('PERFECT MATCH! 🎉',style:TextStyle(color:_gold,fontWeight:FontWeight.w900,fontSize:18)),const SizedBox(height:8),FilledButton.icon(onPressed:()=>setState(_shuffle),icon:const Icon(Icons.shuffle),label:const Text('NEW GAME'))]));
 }
-
-class MemoryGame extends StatefulWidget {
-  const MemoryGame({super.key});
-  @override
-  State<MemoryGame> createState() => _MemoryGameState();
-}
-class _MemoryGameState extends State<MemoryGame> {
-  final symbols = ['🍀','🚀','🎸','🐼','🍀','🚀','🎸','🐼'];
-  late List<int> order;
-  final opened = <int>[];
-  final matched = <int>{};
-  int moves = 0;
-  bool rewarded = false;
-  @override
-  void initState() { super.initState(); _shuffle(); }
-  void _shuffle() { order = List.generate(8,(i)=>i)..shuffle(); opened.clear(); matched.clear(); moves=0; rewarded=false; }
-  void _tap(int i) {
-    if (opened.length == 2 || opened.contains(i) || matched.contains(i)) return;
-    setState(() { opened.add(i); if (opened.length == 2) { moves++; if (symbols[order[opened[0]]] == symbols[order[opened[1]]]) { matched.addAll(opened); opened.clear(); } else { Future.delayed(const Duration(milliseconds:750), () { if(mounted) setState(()=>opened.clear()); }); } } });
-    if (matched.length == 8 && !rewarded) { rewarded=true; GameMelaBackend.claimReward('memory',40); GameMelaBackend.saveProgress('memory',moves);GameMelaAds.gameFinished(); }
-  }
-  @override
-  Widget build(BuildContext context) => _GameScaffold('Memory Match', Column(children: [
-    Text('Moves: $moves  •  Pairs: ${matched.length ~/ 2}/4', style: const TextStyle(color: _gold, fontSize: 19)),
-    const SizedBox(height: 20), Expanded(child: GridView.builder(itemCount:8, gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:2, childAspectRatio:1.35, crossAxisSpacing:12, mainAxisSpacing:12),
-      itemBuilder:(c,i)=>InkWell(onTap:()=>_tap(i), child:Container(decoration:BoxDecoration(color:matched.contains(i)?Colors.green.shade900:_panel,borderRadius:BorderRadius.circular(18),border:Border.all(color:_gold.withValues(alpha:.25))),alignment:Alignment.center,child:Text(matched.contains(i)||opened.contains(i)?symbols[order[i]]:'?',style:const TextStyle(fontSize:34,fontWeight:FontWeight.bold)))))),
-    if(matched.length==8) const Text('You matched every pair!',style:TextStyle(color:_gold)),
-    const SizedBox(height:12), FilledButton(onPressed:()=>setState(_shuffle),child:const Text('Restart')),
-  ]));
-}
-
-class NumberPuzzleGame extends StatefulWidget {
-  const NumberPuzzleGame({super.key});
-  @override
-  State<NumberPuzzleGame> createState()=>_NumberPuzzleGameState();
-}
+class NumberPuzzleGame extends StatefulWidget { const NumberPuzzleGame({super.key}); @override State<NumberPuzzleGame> createState()=>_NumberPuzzleGameState(); }
 class _NumberPuzzleGameState extends State<NumberPuzzleGame>{
-  List<int> tiles=[1,2,3,4,5,6,7,8,0];
-  int moves=0;
-  bool rewarded=false;
-  void shuffle(){ tiles=[1,2,3,4,5,6,7,8,0]; for(var i=0;i<100;i++){ final blank=tiles.indexOf(0); final opts=[blank-3,blank+3, if(blank%3>0) blank-1, if(blank%3<2) blank+1].where((x)=>x>=0&&x<9).toList(); final target=opts[Random().nextInt(opts.length)]; tiles[blank]=tiles[target]; tiles[target]=0; } moves=0; rewarded=false; }
-  void tap(int i){ final b=tiles.indexOf(0); if((i-b).abs()==3 || (i~/3==b~/3 && (i-b).abs()==1)){ setState(() { tiles[b]=tiles[i]; tiles[i]=0; moves++; }); if(solved && !rewarded){rewarded=true;GameMelaBackend.claimReward('number_puzzle',100);GameMelaBackend.saveProgress('number_puzzle',moves);GameMelaAds.gameFinished();} } }
-  bool get solved=>tiles.join()== '123456780';
-  @override
-  Widget build(BuildContext context)=>_GameScaffold('Number Puzzle',Column(children:[
-    Text('Moves: $moves',style:const TextStyle(color:_gold,fontSize:20)),const SizedBox(height:20),
-    Expanded(child:GridView.builder(itemCount:9,gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:8,mainAxisSpacing:8),itemBuilder:(c,i)=>InkWell(onTap:()=>tap(i),child:Container(decoration:BoxDecoration(color:tiles[i]==0?Colors.black26:_panel,borderRadius:BorderRadius.circular(15),border:Border.all(color:_gold.withValues(alpha:.2))),alignment:Alignment.center,child:Text(tiles[i]==0?'': '${tiles[i]}',style:const TextStyle(fontSize:30,fontWeight:FontWeight.bold)))))),
-    if(solved) const Text('Puzzle solved!',style:TextStyle(color:_gold,fontSize:20)),const SizedBox(height:12),FilledButton(onPressed:()=>setState(shuffle),child:const Text('Shuffle')),
-  ]));
+ List<int> tiles=[1,2,3,4,5,6,7,8,0];int moves=0,seconds=0;bool rewarded=false,won=false;Timer? timer;
+ @override void initState(){super.initState();_shuffle();}
+ void _shuffle(){timer?.cancel();tiles=[1,2,3,4,5,6,7,8,0];for(var n=0;n<180;n++){final b=tiles.indexOf(0);final opts=[if(b>=3)b-3,if(b<6)b+3,if(b%3>0)b-1,if(b%3<2)b+1];final t=opts[Random().nextInt(opts.length)];tiles[b]=tiles[t];tiles[t]=0;}moves=0;seconds=0;rewarded=false;won=false;timer=Timer.periodic(const Duration(seconds:1),(_){if(mounted&&!won)setState(()=>seconds++);});}
+ void _tap(int i){if(won)return;final b=tiles.indexOf(0);if((i-b).abs()==3||(i~/3==b~/3&&(i-b).abs()==1)){setState(()=>{tiles[b]=tiles[i];tiles[i]=0;moves++;});if(solved){won=true;timer?.cancel();if(!rewarded){rewarded=true;GameMelaBackend.claimReward('number_puzzle',100);GameMelaBackend.saveProgress('number_puzzle',moves);GameMelaAds.gameFinished();}}}}
+ bool get solved=>tiles.join()=='123456780';
+ @override void dispose(){timer?.cancel();super.dispose();}
+ @override Widget build(BuildContext context)=>_GameScaffold('Number Puzzle',Column(children:[Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[_bubbleHud('MOVES',moves.toString()),_bubbleHud('TIME',seconds.toString()+'s'),_bubbleHud('STATUS',won?'WON':'PLAY')]),const SizedBox(height:16),Expanded(child:Center(child:AspectRatio(aspectRatio:1,child:GridView.builder(physics:const NeverScrollableScrollPhysics(),itemCount:9,gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:3,crossAxisSpacing:9,mainAxisSpacing:9),itemBuilder:(c,i)=>InkWell(onTap:()=>_tap(i),borderRadius:BorderRadius.circular(16),child:AnimatedContainer(duration:const Duration(milliseconds:130),decoration:BoxDecoration(gradient:tiles[i]==0?null:const LinearGradient(colors:[Color(0xFF315C83),Color(0xFF172B49)]),color:tiles[i]==0?Colors.black26:null,borderRadius:BorderRadius.circular(16),border:Border.all(color:_gold.withValues(alpha:.25))),alignment:Alignment.center,child:Text(tiles[i]==0?'':tiles[i].toString(),style:const TextStyle(fontSize:34,fontWeight:FontWeight.w900)))))))),if(won)const Text('PUZZLE SOLVED! 🏆',style:TextStyle(color:_gold,fontSize:20,fontWeight:FontWeight.w900)),const SizedBox(height:12),FilledButton.icon(onPressed:()=>setState(_shuffle),icon:const Icon(Icons.refresh),label:const Text('NEW PUZZLE'))]));
 }
-
 class WordPuzzleGame extends StatefulWidget { const WordPuzzleGame({super.key}); @override State<WordPuzzleGame> createState()=>_WordPuzzleGameState(); }
 class _WordPuzzleGameState extends State<WordPuzzleGame>{
-  final words=[('ELPPA','APPLE'),('NIARB','BRAIN'),('GNIRAC','RACING'),('ZZULPE','PUZZLE'),('DOLG','GOLD')];
-  int index=0,score=0; final answer=TextEditingController(); String message=''; bool rewarded=false;
-  @override void dispose(){answer.dispose();super.dispose();}
-  void check(){if(answer.text.trim().toUpperCase()==words[index].$2){score++;message='Correct!';if(score>=5&&!rewarded){rewarded=true;GameMelaBackend.claimReward('word_puzzle',50);GameMelaBackend.saveProgress('word_puzzle',score);GameMelaAds.gameFinished();}}else{message='Not quite. Try again.';} setState((){});}
-  void next(){setState((){index=(index+1)%words.length;answer.clear();message='';});}
-  @override Widget build(BuildContext context)=>_GameScaffold('Word Puzzle',Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[
-    Text('Score: $score',style:const TextStyle(color:_gold,fontSize:20)),const SizedBox(height:30),
-    const Text('Unscramble this word',textAlign:TextAlign.center,style:TextStyle(color:Colors.white70)),
-    const SizedBox(height:16),Text(words[index].$1.split('').join('  '),textAlign:TextAlign.center,style:const TextStyle(fontSize:34,fontWeight:FontWeight.w900,letterSpacing:2)),
-    const SizedBox(height:22),TextField(controller:answer,textCapitalization:TextCapitalization.characters,decoration:const InputDecoration(hintText:'Your answer',border:OutlineInputBorder())),
-    const SizedBox(height:12),FilledButton(onPressed:check,child:const Text('Check Answer')),Text(message,textAlign:TextAlign.center,style:const TextStyle(color:_gold)),
-    const Spacer(),OutlinedButton(onPressed:next,child:const Text('Next Word')),
-  ]));
+ static const words=[('ELPPA','APPLE'),('NIARB','BRAIN'),('GNICAR','RACING'),('ELZZUP','PUZZLE'),('DLOG','GOLD'),('RETAW','WATER'),('NOOM','MOON'),('REWOLF','FLOWER'),('RETUPMOC','COMPUTER'),('THGIL','LIGHT'),('REWOP','POWER'),('KOOB','BOOK'),('RIAH','HAIR'),('HSALF','FLASH'),('ENOTS','STONE')];
+ int index=0,score=0,streak=0;final answer=TextEditingController();String message='';bool solved=false;
+ @override void dispose(){answer.dispose();super.dispose();}
+ void check(){if(solved)return;final ok=answer.text.trim().toUpperCase()==words[index].$2;setState(()=>{message=ok?'Correct! +10 points':'Try again — look carefully';solved=ok;if(ok){score+=10;streak++;}else{streak=0;}});}
+ void next(){if(index==words.length-1){GameMelaBackend.claimReward('word_puzzle',score);GameMelaBackend.saveProgress('word_puzzle',score);GameMelaAds.gameFinished();}setState(()=>{index=(index+1)%words.length;answer.clear();message='';solved=false;});}
+ @override Widget build(BuildContext context)=>_GameScaffold('Word Puzzle',Column(crossAxisAlignment:CrossAxisAlignment.stretch,children:[Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[Text('SCORE  '+score.toString(),style:const TextStyle(color:_gold,fontWeight:FontWeight.w900)),Text('WORD '+(index+1).toString()+'/'+words.length.toString(),style:const TextStyle(color:Colors.white60))]),const SizedBox(height:26),const Text('UNSCRAMBLE THE WORD',textAlign:TextAlign.center,style:TextStyle(color:Colors.white60,letterSpacing:1.4)),const SizedBox(height:20),Container(padding:const EdgeInsets.symmetric(vertical:28),decoration:BoxDecoration(color:_panel,borderRadius:BorderRadius.circular(20),border:Border.all(color:_gold.withValues(alpha:.25))),child:Text(words[index].$1.split('').join('  '),textAlign:TextAlign.center,style:const TextStyle(fontSize:30,fontWeight:FontWeight.w900,letterSpacing:2,color:_gold))),const SizedBox(height:20),TextField(controller:answer,textCapitalization:TextCapitalization.characters,enabled:!solved,onSubmitted:(_)=>check(),decoration:const InputDecoration(hintText:'Type your answer',border:OutlineInputBorder(),prefixIcon:Icon(Icons.edit))),const SizedBox(height:12),FilledButton(onPressed:solved?next:check,child:Text(solved?'NEXT WORD':'CHECK ANSWER')),const SizedBox(height:10),Text(message,textAlign:TextAlign.center,style:TextStyle(color:solved?Colors.greenAccent:Colors.orangeAccent,fontWeight:FontWeight.bold)),const Spacer(),Text('Streak  x'+streak.toString()+'   •   10 points per word',textAlign:TextAlign.center,style:const TextStyle(color:Colors.white54))]));
 }
-
 class RaceGame extends StatefulWidget {
   final String vehicle;
   const RaceGame({super.key,required this.vehicle});
