@@ -70,12 +70,21 @@ jobs:
         run: flutter test
       - name: Analyze
         run: flutter analyze
-      - name: Build debug APK
+      - name: Build debug APK with Google test ads
         run: flutter build apk --debug
-      - name: Rename APK
-        run: cp build/app/outputs/flutter-apk/app-debug.apk GameMela.apk
+      - name: Rename test APK
+        run: cp build/app/outputs/flutter-apk/app-debug.apk GameMela-test.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: GameMela-Android-debug
-          path: GameMela.apk
+          name: GameMela-Android-test
+          path: GameMela-test.apk
+          retention-days: 14
+      - name: Build debug-signed APK with publisher ad unit IDs
+        run: flutter build apk --debug --dart-define=GAMEMELA_USE_LIVE_ADS=true
+      - name: Rename live-ID APK
+        run: cp build/app/outputs/flutter-apk/app-debug.apk GameMela-live-ad-ids.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GameMela-Android-live-ad-ids
+          path: GameMela-live-ad-ids.apk
           retention-days: 14
