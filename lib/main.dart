@@ -114,6 +114,7 @@ class HomeContent extends StatelessWidget {
           ),
         ]),
       ),
+      const RewardedCoinsCard(),
       const SizedBox(height: 25),
       const SectionTitle('Featured games', 'Pick your challenge'),
       const SizedBox(height: 13),
@@ -137,6 +138,100 @@ class HomeContent extends StatelessWidget {
       const Text('Open Garage to create your player account and sync Coins and progress.', style: TextStyle(color: Colors.white38, fontSize: 11)),
       const GameMelaBannerAd(),
     ],
+  );
+}
+
+
+class RewardedCoinsCard extends StatefulWidget {
+  const RewardedCoinsCard({super.key});
+
+  @override
+  State<RewardedCoinsCard> createState() => _RewardedCoinsCardState();
+}
+
+class _RewardedCoinsCardState extends State<RewardedCoinsCard> {
+  bool busy = false;
+
+  Future<void> _watchAd() async {
+    if (!GameMelaBackend.ready) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('20 Coins पाने के लिए पहले Garage में account बनाइए या sign in कीजिए।')),
+      );
+      return;
+    }
+    setState(() => busy = true);
+    try {
+      final startingCoins = GameMelaBackend.coins.value;
+      final customData = await GameMelaBackend.createRewardedAdSession();
+      final earned = await GameMelaAds.showRewardedAd(customData: customData);
+      if (!mounted) return;
+      if (!earned) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('विज्ञापन पूरा नहीं हुआ। Coins नहीं जोड़े गए।')),
+        );
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('विज्ञापन पूरा हुआ। 20 Coins की सुरक्षित पुष्टि हो रही है...')),
+      );
+
+      var credited = false;
+      for (var attempt = 0; attempt < 6; attempt++) {
+        await Future.delayed(const Duration(seconds: 2));
+        await GameMelaBackend.refreshCoins();
+        if (GameMelaBackend.coins.value >= startingCoins + 20) {
+          credited = true;
+          break;
+        }
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(credited
+              ? 'बधाई! 20 Coins आपके खाते में जुड़ गए।'
+              : 'सत्यापन अभी जारी है। थोड़ी देर बाद Coins अपने-आप अपडेट होंगे।'),
+        ),
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(top: 18),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(19),
+      gradient: const LinearGradient(
+        colors: [Color(0xFF263A63), Color(0xFF20213F)],
+      ),
+      border: Border.all(color: gold.withValues(alpha: .35)),
+    ),
+    child: Row(children: [
+      const Text('🎁', style: TextStyle(fontSize: 34)),
+      const SizedBox(width: 12),
+      const Expanded(child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('FREE 20 COINS', style: TextStyle(color: gold, fontWeight: FontWeight.w900, letterSpacing: 1)),
+          SizedBox(height: 4),
+          Text('Watch a rewarded ad and earn 20 Coins', style: TextStyle(color: Colors.white70, fontSize: 11)),
+        ],
+      )),
+      FilledButton(
+        onPressed: busy ? null : _watchAd,
+        style: FilledButton.styleFrom(backgroundColor: gold, foregroundColor: navy),
+        child: Text(busy ? 'PLEASE WAIT' : 'WATCH'),
+      ),
+    ]),
   );
 }
 
