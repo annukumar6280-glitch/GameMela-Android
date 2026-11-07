@@ -37,7 +37,7 @@ class GameMelaAds {
     );
     late final RewardedAd ad;
     try { ad = await loaded.future; } catch (_) { return false; }
-    await ad.setServerSideVerificationOptions(
+    await ad.setServerSideOptions(
       ServerSideVerificationOptions(customData: customData),
     );
     final completed = Completer<bool>();
