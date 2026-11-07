@@ -23,10 +23,14 @@ void main() {
     ];
 
     for (final title in titles) {
-      await tester.tap(find.text(title).last);
+      final gameCard = find.text(title).last;
+      await tester.ensureVisible(gameCard);
+      await tester.pumpAndSettle();
+      await tester.tap(gameCard);
       await tester.pumpAndSettle();
       expect(find.text(title).last, findsOneWidget);
-      await tester.pageBack();
+      await tester.tap(find.byTooltip('Back'));
+      await tester.pumpAndSettle();
       await tester.pumpAndSettle();
     }
 
