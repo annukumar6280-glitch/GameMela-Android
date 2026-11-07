@@ -172,7 +172,7 @@ class GarageContent extends StatelessWidget {
     const SizedBox(height: 12),
     _garageTile('🏎️', 'Car Collection', 'Choose and tune your cars'),
     const SizedBox(height: 20),
-    const Text('Your garage is ready for the first vehicle. Vehicle purchases and upgrades will be enabled with the racing game update.', style: TextStyle(color: Colors.white54, height: 1.5)),
+    const Text('Earn Coins in games, then use them to unlock vehicles and upgrades. Garage purchases will be enabled in the next development stage.', style: TextStyle(color: Colors.white54, height: 1.5)),
   ]);
 }
 
@@ -206,7 +206,7 @@ class GameCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text(game.subtitle, style: const TextStyle(color: Colors.white54, fontSize: 11)),
         const SizedBox(height: 8),
-        Text('COMING SOON', style: TextStyle(color: game.color, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+        Text('TAP TO PLAY', style: TextStyle(color: game.color, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
       ])),
       const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white38),
     ]);
