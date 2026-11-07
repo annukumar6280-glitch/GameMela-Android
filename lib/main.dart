@@ -2,6 +2,7 @@ import 'games/mini_games.dart';
 import 'services/backend.dart';
 import 'ads/banner_ad.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,6 +14,7 @@ const navy = Color(0xFF090F1F);
 const panel = Color(0xFF141E33);
 const gold = Color(0xFFFFC857);
 const blue = Color(0xFF38BDF8);
+const _bikeSimulatorChannel = MethodChannel('gamemela/bike_simulator');
 
 class GameMelaApp extends StatelessWidget {
   const GameMelaApp({super.key});
@@ -393,6 +395,30 @@ class _GarageContentState extends State<GarageContent> {
             ),
           ]));
         }),
+        if (v['vehicle_type'] == 'bike')
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () async {
+                try {
+                  await _bikeSimulatorChannel.invokeMethod<void>('launchBikeSimulator');
+                } catch (error) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('3D Bike Simulator could not open: $error')),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(Icons.play_arrow_rounded),
+              label: const Text('RIDE NOW · 3D SIMULATOR'),
+              style: FilledButton.styleFrom(
+                backgroundColor: gold,
+                foregroundColor: navy,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+              ),
+            ),
+          ),
       ]),
     );
   }
