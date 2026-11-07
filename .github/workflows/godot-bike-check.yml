@@ -22,10 +22,14 @@ jobs:
           sudo mv Godot_v4.3-stable_linux.x86_64 /usr/local/bin/godot
 
       - name: Import and parse project
-        run: godot --headless --editor --path bike_simulator --quit
+        run: |
+          godot --headless --editor --path bike_simulator --quit 2>&1 | tee /tmp/godot-import.log
+          ! grep -E "SCRIPT ERROR|Parse Error|ERROR: Failed to load script" /tmp/godot-import.log
 
       - name: Run 3D scene headlessly
-        run: godot --headless --path bike_simulator --quit-after 10
+        run: |
+          godot --headless --path bike_simulator --quit-after 10 2>&1 | tee /tmp/godot-run.log
+          ! grep -E "SCRIPT ERROR|Parse Error|ERROR: Failed to load script" /tmp/godot-run.log
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
