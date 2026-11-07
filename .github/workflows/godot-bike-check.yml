@@ -1,0 +1,25 @@
+name: Validate GameMela 3D Bike Prototype
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ feature/3d-bike-simulator ]
+    paths:
+      - 'bike_simulator/**'
+      - '.github/workflows/godot-bike-check.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.3
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q Godot_v4.3-stable_linux.x86_64.zip
+          chmod +x Godot_v4.3-stable_linux.x86_64
+          sudo mv Godot_v4.3-stable_linux.x86_64 /usr/local/bin/godot
+      - name: Import and parse project
+        run: godot --headless --editor --path bike_simulator --quit
+      - name: Run 3D scene headlessly
+        run: godot --headless --path bike_simulator --quit-after 10
