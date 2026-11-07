@@ -3,7 +3,7 @@ name: Build GameMela Android APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, feature/3d-bike-simulator ]
 
 concurrency:
   group: gamemela-android-build-${{ github.ref }}
@@ -66,6 +66,16 @@ jobs:
           ET.parse(manifest)
           PY
           sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/' android/app/build.gradle.kts
+      - name: Export Godot bike game into the GameMela Android app
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.3-stable/Godot_v4.3-stable_linux.x86_64.zip
+          unzip -q Godot_v4.3-stable_linux.x86_64.zip
+          chmod +x Godot_v4.3-stable_linux.x86_64
+          sudo mv Godot_v4.3-stable_linux.x86_64 /usr/local/bin/godot
+          godot --headless --editor --path bike_simulator --quit
+          mkdir -p android/app/src/main/assets
+          godot --headless --path bike_simulator --export-pack "Android" android/app/src/main/assets/bike_simulator.pck
+          python3 tooling/configure_godot_android_embedding.py
       - name: Run tests
         run: flutter test
       - name: Analyze
