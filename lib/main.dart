@@ -1,10 +1,12 @@
 import 'games/mini_games.dart';
 import 'services/backend.dart';
+import 'ads/banner_ad.dart';
 import 'package:flutter/material.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GameMelaBackend.initialize();
+  await GameMelaAds.initialize();
   runApp(const GameMelaApp());
 }
 
@@ -133,7 +135,8 @@ class HomeContent extends StatelessWidget {
         Expanded(child: StatCard(icon: Icons.emoji_events, label: 'Wins', value: '0')),
       ]),
       const SizedBox(height: 15),
-      const Text('Coins and progress will appear here when your player profile is connected.', style: TextStyle(color: Colors.white38, fontSize: 11)),
+      const Text('Your progress and Coins sync with your player profile.', style: TextStyle(color: Colors.white38, fontSize: 11)),
+      const GameMelaBannerAd(),
     ],
   );
 }
@@ -161,6 +164,7 @@ class GamesContent extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 12),
         child: GameCard(game: g, horizontal: true),
       )),
+      const GameMelaBannerAd(),
     ],
   );
 }
@@ -252,6 +256,7 @@ class _GarageContentState extends State<GarageContent> {
       }),
       if (!GameMelaBackend.ready)
         const Padding(padding: EdgeInsets.only(top: 10), child: Text('Cloud profile is not connected yet. Check your internet connection and reopen the app.', style: TextStyle(color: Colors.orangeAccent, fontSize: 12))),
+      const GameMelaBannerAd(),
     ]);
   }
 
@@ -293,20 +298,6 @@ class _GarageContentState extends State<GarageContent> {
     );
   }
 }
-
-Widget _garageTile(String emoji, String title, String subtitle) => Container(
-  padding: const EdgeInsets.all(18),
-  decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)),
-  child: Row(children: [
-    Text(emoji, style: const TextStyle(fontSize: 34)),
-    const SizedBox(width: 14),
-    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-      Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 12)),
-    ])),
-    const Icon(Icons.chevron_right_rounded, color: gold),
-  ]),
-);
 
 class GameCard extends StatelessWidget {
   final GameInfo game;
