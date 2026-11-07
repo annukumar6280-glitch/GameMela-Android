@@ -1,7 +1,12 @@
 import 'games/mini_games.dart';
+import 'services/backend.dart';
 import 'package:flutter/material.dart';
 
-void main() => runApp(const GameMelaApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await GameMelaBackend.initialize();
+  runApp(const GameMelaApp());
+}
 
 const navy = Color(0xFF090F1F);
 const panel = Color(0xFF141E33);
@@ -160,20 +165,133 @@ class GamesContent extends StatelessWidget {
   );
 }
 
-class GarageContent extends StatelessWidget {
+class GarageContent extends StatefulWidget {
   const GarageContent({super.key});
   @override
-  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(20), children: [
-    const Text('YOUR GARAGE', style: TextStyle(color: gold, letterSpacing: 2, fontSize: 12, fontWeight: FontWeight.bold)),
-    const SizedBox(height: 8),
-    const Text('Build your dream ride', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
-    const SizedBox(height: 20),
-    _garageTile('🏍️', 'Bike Collection', 'Models, upgrades and repairs'),
-    const SizedBox(height: 12),
-    _garageTile('🏎️', 'Car Collection', 'Choose and tune your cars'),
-    const SizedBox(height: 20),
-    const Text('Earn Coins in games, then use them to unlock vehicles and upgrades. Garage purchases will be enabled in the next development stage.', style: TextStyle(color: Colors.white54, height: 1.5)),
-  ]);
+  State<GarageContent> createState() => _GarageContentState();
+}
+
+class _GarageContentState extends State<GarageContent> {
+  String vehicleType = 'bike';
+  List<Map<String, dynamic>> vehicles = [];
+  bool loading = true;
+  String? busy;
+
+  @override
+  void initState() { super.initState(); _load(); }
+
+  Future<void> _load() async {
+    setState(() => loading = true);
+    try { vehicles = await GameMelaBackend.loadVehicles(); }
+    catch (_) { vehicles = []; }
+    if (mounted) setState(() => loading = false);
+  }
+
+  Future<void> _action(String key, Future<void> Function() action) async {
+    setState(() => busy = key);
+    try {
+      await action();
+      await _load();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Garage updated successfully')));
+    } catch (error) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))));
+    } finally { if (mounted) setState(() => busy = null); }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final owned = vehicles.where((v) => v['vehicle_type'] == vehicleType).toList();
+    final isBike = vehicleType == 'bike';
+    return ListView(padding: const EdgeInsets.fromLTRB(20, 18, 20, 28), children: [
+      const Text('YOUR GARAGE', style: TextStyle(color: gold, letterSpacing: 2, fontSize: 12, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 8),
+      const Text('Build your dream ride', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w900)),
+      const SizedBox(height: 14),
+      ValueListenableBuilder<int>(valueListenable: GameMelaBackend.coins, builder: (_, value, __) => Align(alignment: Alignment.centerLeft, child: CoinPill(value: value))),
+      const SizedBox(height: 16),
+      SegmentedButton<String>(
+        segments: const [
+          ButtonSegment(value: 'bike', label: Text('Bikes'), icon: Icon(Icons.two_wheeler)),
+          ButtonSegment(value: 'car', label: Text('Cars'), icon: Icon(Icons.directions_car)),
+        ],
+        selected: {vehicleType},
+        onSelectionChanged: (values) => setState(() => vehicleType = values.first),
+      ),
+      const SizedBox(height: 18),
+      Text('YOUR ${isBike ? 'BIKES' : 'CARS'}', style: const TextStyle(color: gold, letterSpacing: 1.5, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 10),
+      if (loading) const Center(child: Padding(padding: EdgeInsets.all(18), child: CircularProgressIndicator()))
+      else if (owned.isEmpty) const Text('No vehicles yet. Unlock your first ride below.', style: TextStyle(color: Colors.white54))
+      else ...owned.map((v) => _ownedVehicle(v)),
+      const SizedBox(height: 22),
+      Text('UNLOCK NEW ${isBike ? 'BIKES' : 'CARS'}', style: const TextStyle(color: gold, letterSpacing: 1.5, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 10),
+      ...List.generate(5, (i) {
+        final number = i + 1;
+        final id = '${vehicleType}_$number';
+        final price = isBike ? 500 + i * 100 : 1000 + i * 200;
+        final has = vehicles.any((v) => v['model_id'] == id);
+        return Container(
+          margin: const EdgeInsets.only(bottom: 9),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(16), border: Border.all(color: Colors.white10)),
+          child: Row(children: [
+            Text(isBike ? '🏍️' : '🏎️', style: const TextStyle(fontSize: 28)),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${isBike ? 'Bike' : 'Car'} Model $number', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('$price Coins', style: const TextStyle(color: gold, fontSize: 12)),
+            ])),
+            if (has) const Text('OWNED', style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold, fontSize: 11))
+            else FilledButton(
+              onPressed: busy == id || !GameMelaBackend.ready ? null : () => _action(id, () => GameMelaBackend.purchaseVehicle(vehicleType, id)),
+              child: Text(busy == id ? '...' : 'BUY'),
+            ),
+          ]),
+        );
+      }),
+      if (!GameMelaBackend.ready)
+        const Padding(padding: EdgeInsets.only(top: 10), child: Text('Cloud profile is not connected yet. Check your internet connection and reopen the app.', style: TextStyle(color: Colors.orangeAccent, fontSize: 12))),
+    ]);
+  }
+
+  Widget _ownedVehicle(Map<String, dynamic> v) {
+    final upgrades = Map<String, dynamic>.from(v['upgrades'] as Map? ?? {});
+    final durability = (v['durability'] as num?)?.toInt() ?? 100;
+    final id = v['id'].toString();
+    final model = (v['model_id'] as String).split('_').last;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: gold.withValues(alpha: .25))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text(v['vehicle_type'] == 'bike' ? '🏍️' : '🏎️', style: const TextStyle(fontSize: 30)),
+          const SizedBox(width: 10),
+          Expanded(child: Text('${v['vehicle_type'] == 'bike' ? 'Bike' : 'Car'} Model $model', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+          Text('$durability%', style: const TextStyle(color: gold, fontWeight: FontWeight.bold)),
+        ]),
+        const SizedBox(height: 8),
+        LinearProgressIndicator(value: durability / 100, minHeight: 6, borderRadius: BorderRadius.circular(5)),
+        Align(alignment: Alignment.centerRight, child: TextButton.icon(
+          onPressed: durability == 100 || busy == 'repair_$id' ? null : () => _action('repair_$id', () => GameMelaBackend.repairVehicle(id)),
+          icon: const Icon(Icons.build_circle_outlined), label: Text(durability == 100 ? 'FULLY REPAIRED' : 'REPAIR · ${(100-durability)*10} COINS'),
+        )),
+        const Divider(color: Colors.white12),
+        ...['speed','handling','engine','brakes'].map((stat) {
+          final level = (upgrades[stat] as num?)?.toInt() ?? 0;
+          final cost = (level + 1) * 100;
+          return Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: Row(children: [
+            Expanded(child: Text('${stat[0].toUpperCase()} ${stat.substring(1)}  ·  Lv $level/50', style: const TextStyle(fontSize: 12))),
+            TextButton(
+              onPressed: level >= 50 || busy == '${id}_$stat' ? null : () => _action('${id}_$stat', () => GameMelaBackend.upgradeVehicle(id, stat)),
+              child: Text(level >= 50 ? 'MAX' : 'UPGRADE · $cost'),
+            ),
+          ]));
+        }),
+      ]),
+    );
+  }
 }
 
 Widget _garageTile(String emoji, String title, String subtitle) => Container(
@@ -230,12 +348,24 @@ class GameCard extends StatelessWidget {
 }
 
 class CoinPill extends StatelessWidget {
-  const CoinPill({super.key});
+  final int? value;
+  const CoinPill({super.key, this.value});
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    if (value != null) return _coinView(value!);
+    return ValueListenableBuilder<int>(
+      valueListenable: GameMelaBackend.coins,
+      builder: (_, amount, __) => _coinView(amount),
+    );
+  }
+  Widget _coinView(int amount) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     decoration: BoxDecoration(color: gold.withValues(alpha: .12), borderRadius: BorderRadius.circular(30), border: Border.all(color: gold.withValues(alpha: .4))),
-    child: const Row(children: [Icon(Icons.monetization_on, color: gold, size: 18), SizedBox(width: 5), Text('0', style: TextStyle(color: gold, fontWeight: FontWeight.bold))]),
+    child: Row(children: [
+      const Icon(Icons.monetization_on, color: gold, size: 18),
+      const SizedBox(width: 5),
+      Text('$amount', style: const TextStyle(color: gold, fontWeight: FontWeight.bold)),
+    ]),
   );
 }
 
