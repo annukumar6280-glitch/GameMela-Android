@@ -16,7 +16,7 @@ class GameMelaAds {
     _completedGames++;
     if (_completedGames % 3 != 0) return;
     InterstitialAd.load(
-      adUnitId: 'ca-app-pub-3940256099942544/1033173712',
+      adUnitId: 'ca-app-pub-9742595266312511/4190812744',
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
