@@ -52,7 +52,7 @@ class _GameMelaBannerAdState extends State<GameMelaBannerAd> {
   void _loadAd() {
     if (!mounted) return;
     ad = BannerAd(
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111',
+      adUnitId: 'ca-app-pub-9742595266312511/9826282800',
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
