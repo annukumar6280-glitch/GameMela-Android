@@ -306,7 +306,7 @@ func _spawn_traffic(count: int) -> void:
 
 func _make_traffic_car() -> Node3D:
 	var car := Node3D.new()
-	var paint := [Color(0.08, 0.28, 0.72), Color(0.72, 0.12, 0.06), Color(0.78, 0.76, 0.66), Color(0.08, 0.38, 0.28)][rng.randi_range(0, 3)]
+	var paint: Color = [Color(0.08, 0.28, 0.72), Color(0.72, 0.12, 0.06), Color(0.78, 0.76, 0.66), Color(0.08, 0.38, 0.28)][rng.randi_range(0, 3)]
 	_add_mesh(car, BoxMesh.new(), Vector3(0, 0.72, 0), Vector3(1.8, 0.72, 3.2), paint)
 	_add_mesh(car, BoxMesh.new(), Vector3(0, 1.28, -0.18), Vector3(1.48, 0.56, 1.55), Color(0.12, 0.2, 0.27))
 	for x in [-0.68, 0.68]:
