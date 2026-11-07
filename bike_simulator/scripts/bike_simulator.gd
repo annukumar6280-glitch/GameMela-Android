@@ -28,6 +28,13 @@ var road_marks: Array[MeshInstance3D] = []
 var traffic: Array[Node3D] = []
 var traffic_speeds: Array[float] = []
 var rng := RandomNumberGenerator.new()
+var gear := 1
+var first_person := false
+var engine_audio: AudioStreamPlayer
+var horn_audio: AudioStreamPlayer
+var gear_label: Label
+var mission_label: Label
+var mission_target := 500.0
 
 func _ready() -> void:
 	rng.randomize()
@@ -35,6 +42,7 @@ func _ready() -> void:
 	_build_bike()
 	_build_camera()
 	_build_hud()
+	_build_audio()
 	_spawn_traffic(9)
 
 func _process(delta: float) -> void:
@@ -42,10 +50,13 @@ func _process(delta: float) -> void:
 		return
 	var throttle := throttle_touch or Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP)
 	var brake := brake_touch or Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN)
+	if Input.is_key_pressed(KEY_H) and not horn_audio.playing:
+		horn_audio.play()
 	var left := left_touch or Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT)
 	var right := right_touch or Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT)
+	var gear_limits := [0.0, 11.0, 18.0, 25.0, 32.0, MAX_SPEED]
 	if throttle:
-		speed = move_toward(speed, MAX_SPEED, ACCELERATION * delta)
+		speed = move_toward(speed, gear_limits[gear], ACCELERATION * delta)
 	elif brake:
 		speed = move_toward(speed, 0.0, BRAKING * delta)
 	else:
@@ -57,8 +68,14 @@ func _process(delta: float) -> void:
 	_update_road(delta)
 	_update_traffic(delta)
 	_update_camera(delta)
+	engine_audio.pitch_scale = 0.72 + speed / MAX_SPEED * 0.95
 	speed_label.text = "%03d km/h" % int(speed * 3.6)
 	distance_label.text = "DISTANCE  %04d m" % int(distance)
+	gear_label.text = "GEAR  %d" % gear
+	mission_label.text = "MISSION  %d / %d m" % [mini(int(distance), int(mission_target)), int(mission_target)]
+	if distance >= mission_target:
+		mission_target += 500.0
+		status_label.text = "MISSION COMPLETE  •  + NEXT 500 m"
 	if bike_root.position.x < -4.7 or bike_root.position.x > 4.7:
 		status_label.text = "KEEP TO THE ROAD"
 	else:
@@ -182,6 +199,19 @@ func _build_hud() -> void:
 	_add_control_button(layer, "▶", Vector2(128, -130), Vector2(90, 90), "right")
 	_add_control_button(layer, "BRAKE", Vector2(-220, -120), Vector2(100, 82), "brake")
 	_add_control_button(layer, "ACCEL", Vector2(-110, -120), Vector2(100, 82), "throttle")
+	gear_label = Label.new()
+	gear_label.position = Vector2(190, 34)
+	gear_label.add_theme_font_size_override("font_size", 19)
+	gear_label.add_theme_color_override("font_color", Color(0.5, 0.9, 1.0))
+	layer.add_child(gear_label)
+	mission_label = Label.new()
+	mission_label.position = Vector2(300, 42)
+	mission_label.add_theme_font_size_override("font_size", 15)
+	layer.add_child(mission_label)
+	_add_action_button(layer, "GEAR +", Vector2(-220, -215), Vector2(96, 62), func(): gear = mini(gear + 1, 5))
+	_add_action_button(layer, "GEAR -", Vector2(-326, -215), Vector2(96, 62), func(): gear = maxi(gear - 1, 1))
+	_add_action_button(layer, "HORN", Vector2(-110, -215), Vector2(96, 62), func(): horn_audio.play())
+	_add_action_button(layer, "CAMERA", Vector2(-4, -215), Vector2(96, 62), func(): first_person = not first_person)
 
 func _add_control_button(layer: CanvasLayer, caption: String, offset: Vector2, size: Vector2, action: String) -> void:
 	var button := Button.new()
@@ -200,6 +230,57 @@ func _add_control_button(layer: CanvasLayer, caption: String, offset: Vector2, s
 	layer.add_child(button)
 	button.button_down.connect(func(): _set_touch(action, true))
 	button.button_up.connect(func(): _set_touch(action, false))
+
+func _add_action_button(layer: CanvasLayer, caption: String, offset: Vector2, size: Vector2, action: Callable) -> void:
+	var button := Button.new()
+	button.text = caption
+	button.size = size
+	button.anchor_left = 1.0
+	button.anchor_right = 1.0
+	button.anchor_top = 1.0
+	button.anchor_bottom = 1.0
+	button.offset_left = offset.x
+	button.offset_right = offset.x + size.x
+	button.offset_top = offset.y
+	button.offset_bottom = offset.y + size.y
+	button.add_theme_font_size_override("font_size", 15)
+	layer.add_child(button)
+	button.pressed.connect(action)
+
+func _build_audio() -> void:
+	engine_audio = AudioStreamPlayer.new()
+	engine_audio.stream = _make_tone(82.0, 0.22, true)
+	engine_audio.volume_db = -17.0
+	add_child(engine_audio)
+	engine_audio.play()
+	horn_audio = AudioStreamPlayer.new()
+	horn_audio.stream = _make_tone(520.0, 0.42, false)
+	horn_audio.volume_db = -5.0
+	add_child(horn_audio)
+
+func _make_tone(frequency: float, seconds: float, looping: bool) -> AudioStreamWAV:
+	var rate := 22050
+	var count := int(rate * seconds)
+	var bytes := PackedByteArray()
+	bytes.resize(count * 2)
+	for i in range(count):
+		var t := float(i) / float(rate)
+		var envelope := 1.0
+		if not looping:
+			envelope = minf(1.0, t * 35.0) * maxf(0.0, 1.0 - t / seconds)
+		var wave := sin(TAU * frequency * t) * 0.45 + sin(TAU * frequency * 2.01 * t) * 0.18
+		var sample := int(clampf(wave * envelope, -1.0, 1.0) * 26000.0)
+		bytes.encode_s16(i * 2, sample)
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = rate
+	stream.stereo = false
+	stream.data = bytes
+	if looping:
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin = 0
+		stream.loop_end = count
+	return stream
 
 func _set_touch(action: String, value: bool) -> void:
 	match action:
@@ -256,9 +337,16 @@ func _show_restart() -> void:
 	button.pressed.connect(func(): get_tree().reload_current_scene())
 
 func _update_camera(delta: float) -> void:
-	var target := Vector3(bike_root.position.x * 0.42, 4.3, 8.8)
+	var target: Vector3
+	var look_target: Vector3
+	if first_person:
+		target = Vector3(bike_root.position.x, 2.9, 0.9)
+		look_target = Vector3(bike_root.position.x, 2.1, -22.0)
+	else:
+		target = Vector3(bike_root.position.x * 0.42, 4.3, 8.8)
+		look_target = Vector3(bike_root.position.x * 0.25, 1.2, -8.0)
 	camera.position = camera.position.lerp(target, 4.0 * delta)
-	camera.look_at(Vector3(bike_root.position.x * 0.25, 1.2, -8.0), Vector3.UP)
+	camera.look_at(look_target, Vector3.UP)
 
 func _add_box(label: String, size: Vector3, pos: Vector3, color: Color) -> MeshInstance3D:
 	var box := BoxMesh.new()
