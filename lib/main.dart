@@ -55,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(child: IndexedStack(index: tab, children: pages)),
       bottomNavigationBar: NavigationBar(
         backgroundColor: const Color(0xFF10192B),
-        indicatorColor: gold.withOpacity(.16),
+        indicatorColor: gold.withValues(alpha: .16),
         selectedIndex: tab,
         onDestinationSelected: (v) => setState(() => tab = v),
         destinations: const [
@@ -93,7 +93,7 @@ class HomeContent extends StatelessWidget {
           borderRadius: BorderRadius.circular(25),
           gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
             colors: [Color(0xFF203B63), Color(0xFF17213A), Color(0xFF34264A)]),
-          border: Border.all(color: Colors.white.withOpacity(.10)),
+          border: Border.all(color: Colors.white.withValues(alpha: .10)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const Text('YOUR NEXT\nLEVEL STARTS HERE', style: TextStyle(fontSize: 25, height: 1.15, fontWeight: FontWeight.w900)),
@@ -197,7 +197,7 @@ class GameCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final content = Row(children: [
       Container(width: 58, height: 58, decoration: BoxDecoration(
-        color: game.color.withOpacity(.15), borderRadius: BorderRadius.circular(17)),
+        color: game.color.withValues(alpha: .15), borderRadius: BorderRadius.circular(17)),
         alignment: Alignment.center, child: Text(game.emoji, style: const TextStyle(fontSize: 31))),
       const SizedBox(width: 13),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -212,7 +212,7 @@ class GameCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(19),
-        border: Border.all(color: game.color.withOpacity(.20))),
+        border: Border.all(color: game.color.withValues(alpha: .20))),
       child: horizontal ? content : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(game.emoji, style: const TextStyle(fontSize: 35)),
         const Spacer(),
@@ -229,7 +229,7 @@ class CoinPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    decoration: BoxDecoration(color: gold.withOpacity(.12), borderRadius: BorderRadius.circular(30), border: Border.all(color: gold.withOpacity(.4))),
+    decoration: BoxDecoration(color: gold.withValues(alpha: .12), borderRadius: BorderRadius.circular(30), border: Border.all(color: gold.withValues(alpha: .4))),
     child: const Row(children: [Icon(Icons.monetization_on, color: gold, size: 18), SizedBox(width: 5), Text('0', style: TextStyle(color: gold, fontWeight: FontWeight.bold))]),
   );
 }
