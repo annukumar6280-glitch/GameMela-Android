@@ -15,15 +15,33 @@ class GameMelaBackend {
   static Future<void> initialize() async {
     try {
       await Supabase.initialize(url: _url, publishableKey: _publishableKey);
-      if (client.auth.currentUser == null) {
-        await client.auth.signInAnonymously();
-      }
       ready = client.auth.currentUser != null;
       if (ready) await refreshCoins();
     } catch (error) {
       lastError = error.toString();
       ready = false;
     }
+  }
+
+
+  static Future<bool> signIn(String email, String password) async {
+    await client.auth.signInWithPassword(email: email.trim(), password: password);
+    ready = client.auth.currentUser != null;
+    if (ready) await refreshCoins();
+    return ready;
+  }
+
+  static Future<bool> signUp(String email, String password) async {
+    final response = await client.auth.signUp(email: email.trim(), password: password);
+    ready = response.session != null && client.auth.currentUser != null;
+    if (ready) await refreshCoins();
+    return ready;
+  }
+
+  static Future<void> signOut() async {
+    await client.auth.signOut();
+    ready = false;
+    coins.value = 0;
   }
 
   static Future<int> refreshCoins() async {
