@@ -1,3 +1,4 @@
+import 'games/mini_games.dart';
 import 'package:flutter/material.dart';
 
 void main() => runApp(const GameMelaApp());
@@ -209,7 +210,10 @@ class GameCard extends StatelessWidget {
       ])),
       const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.white38),
     ]);
-    return Container(
+    return InkWell(
+      borderRadius: BorderRadius.circular(19),
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => gameForTitle(game.title))),
+      child: Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(19),
         border: Border.all(color: game.color.withValues(alpha: .20))),
@@ -220,6 +224,7 @@ class GameCard extends StatelessWidget {
         const SizedBox(height: 3),
         Text(game.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white54, fontSize: 10)),
       ]),
+      ),
     );
   }
 }
