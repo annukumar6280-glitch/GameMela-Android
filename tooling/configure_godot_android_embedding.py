@@ -8,9 +8,10 @@ gradle = root / "android/app/build.gradle.kts"
 text = gradle.read_text()
 dependency = 'implementation("org.godotengine:godot:4.3.0.stable")'
 if dependency not in text:
-    if "dependencies {" not in text:
-        raise SystemExit("Could not find dependencies block in app/build.gradle.kts")
-    text = text.replace("dependencies {", "dependencies {\n    " + dependency, 1)
+    if "dependencies {" in text:
+        text = text.replace("dependencies {", "dependencies {\n    " + dependency, 1)
+    else:
+        text += "\n\ndependencies {\n    " + dependency + "\n}\n"
     gradle.write_text(text)
 
 main_files = list((root / "android/app/src/main/kotlin").rglob("MainActivity.kt"))
