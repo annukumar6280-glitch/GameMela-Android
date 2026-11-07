@@ -216,7 +216,7 @@ class _RaceGameState extends State<RaceGame>{
     });
   }
   void move(int d){if(running&&!paused)setState(()=>lane=(lane+d).clamp(0,2));}
-  void boost(){if(running&&!paused&&nitroTicks==0)setState(()=>{nitro=true;nitroTicks=65;});}
+  void boost(){if(running&&!paused&&nitroTicks==0)setState(() { nitro=true;nitroTicks=65; });}
   @override void dispose(){timer?.cancel();super.dispose();}
   @override Widget build(BuildContext context)=>_GameScaffold(widget.vehicle+' Racing',Column(children:[
     Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
