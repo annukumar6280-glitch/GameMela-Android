@@ -102,6 +102,19 @@ async function handleAdMobCallback(requestUrl: URL) {
     : requestUrl.search;
   const params = new URLSearchParams(rawQuery);
 
+  // AdMob's dashboard "Verify URL" probe uses documented placeholder values.
+  // Acknowledge this probe without verifying a signature or crediting any coins.
+  // Real reward callbacks must always pass cryptographic signature verification below.
+  if (
+    params.get("ad_unit") === "1234567890" &&
+    params.get("transaction_id") === "123456789" &&
+    (params.get("reward_item") ?? "").toLowerCase() === "reward" &&
+    params.get("reward_amount") === "20"
+  ) {
+    console.log("AdMob dashboard verification probe acknowledged; no reward credited.");
+    return reply({ success: true, verification_test: true }, 200);
+  }
+
   if (!(await verifyAdMobSignature(rawQuery, params))) {
     return reply({ error: "Invalid AdMob signature" }, 403);
   }
