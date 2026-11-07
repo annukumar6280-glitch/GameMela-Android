@@ -164,15 +164,15 @@ class _RaceGameState extends State<RaceGame>{
   @override void dispose(){timer?.cancel();super.dispose();}
   @override Widget build(BuildContext context)=>_GameScaffold('${widget.vehicle} Racing',Column(children:[
     Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[Text('Distance: $score',style:const TextStyle(color:_gold)),Text('Coins: $coins',style:const TextStyle(color:_gold))]),
-    const SizedBox(height:16),Expanded(child:GestureDetector(onHorizontalDragEnd:(d)=>setState(()=>lane=(lane+((d.primaryVelocity??0)<0?-1:1)).clamp(0,2).toInt()),child:Container(decoration:BoxDecoration(color:const Color(0xFF202B3A),borderRadius:BorderRadius.circular(20)),child:CustomPaint(painter:_RoadPainter(lane,obstacles,widget.vehicle),child:const SizedBox.expand())))),
+    const SizedBox(height:16),Expanded(child:GestureDetector(onHorizontalDragEnd:(d)=>setState(()=>lane=(lane+((d.primaryVelocity??0)<0?-1:1)).clamp(0,2).toInt()),child:Container(decoration:BoxDecoration(color:const Color(0xFF202B3A),borderRadius:BorderRadius.circular(20)),child:CustomPaint(painter:_RoadPainter(lane,obstacles),child:const SizedBox.expand())))),
     const SizedBox(height:12),if(crashed) const Text('Crash! Tap race again.',style:TextStyle(color:Colors.orangeAccent)),
     FilledButton(onPressed:running?null:start,child:Text(running?'RACING...':'START RACE')),
     const Text('Swipe left or right to change lanes and avoid traffic.',style:TextStyle(color:Colors.white54,fontSize:12)),
   ]));
 }
 class _RoadPainter extends CustomPainter{
-  final int lane; final List<int> obstacles; final String vehicle;
-  _RoadPainter(this.lane,this.obstacles,this.vehicle);
+  final int lane; final List<int> obstacles;
+  _RoadPainter(this.lane,this.obstacles);
   @override void paint(Canvas canvas,Size size){final p=Paint()..color=Colors.white24..strokeWidth=3;for(var x=1;x<3;x++){for(var y=0.0;y<size.height;y+=35){canvas.drawLine(Offset(size.width*x/3,y),Offset(size.width*x/3,y+18),p);}}final car=Paint()..color=_gold;final w=size.width/7,h=size.height/10;canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(size.width*(lane+.5)/3-w/2,size.height-h-18,w,h),const Radius.circular(10)),car);final obs=Paint()..color=Colors.redAccent;for(final o in obstacles){final l=o%3;final y=size.height-(o*size.height/15);canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(size.width*(l+.5)/3-w/2,y,w,h),const Radius.circular(8)),obs);}}
   @override bool shouldRepaint(covariant _RoadPainter old)=>true;
 }
