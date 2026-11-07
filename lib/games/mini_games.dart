@@ -32,39 +32,48 @@ class _GameScaffold extends StatelessWidget {
 
 class BubblePopGame extends StatefulWidget {
   const BubblePopGame({super.key});
-  @override
-  State<BubblePopGame> createState() => _BubblePopGameState();
+  @override State<BubblePopGame> createState() => _BubblePopGameState();
 }
 class _BubblePopGameState extends State<BubblePopGame> {
-  int score = 0;
-  List<int> bubbles = List.generate(24, (i) => i);
-  bool rewarded = false;
-  void reset() => setState(() { score = 0; rewarded = false; bubbles = List.generate(24, (i) => i); });
-  void popBubble(int i) {
-    if (!bubbles.contains(i)) return;
-    setState(() { bubbles.remove(i); score += 5; });
-    if (bubbles.isEmpty && !rewarded) {
-      rewarded = true;
-      GameMelaBackend.claimReward('bubble_pop', score);
-      GameMelaBackend.saveProgress('bubble_pop', score);
-      GameMelaAds.gameFinished();
-    }
+  final _rng=Random();
+  final _colors=const [Color(0xFF39C6F4),Color(0xFFFF5D8F),Color(0xFF9D7BFF),Color(0xFFFFC857),Color(0xFF58D68D)];
+  List<int> bubbles=[];
+  int score=0,seconds=45,combo=0,level=1;
+  bool playing=false,finished=false,rewarded=false;
+  Timer? timer;
+  @override void initState(){super.initState();_reset();}
+  void _reset(){
+    timer?.cancel();
+    setState((){score=0;seconds=45;combo=0;level=1;playing=true;finished=false;rewarded=false;bubbles=List.generate(30,(i)=>i);});
+    timer=Timer.periodic(const Duration(seconds:1),(_){if(!mounted||!playing)return;setState(()=>seconds--);if(seconds<=0)_finish();});
   }
-  @override
-  Widget build(BuildContext context) => _GameScaffold('Bubble Pop', Column(children: [
-    Text('Score: $score', style: const TextStyle(fontSize: 24, color: _gold, fontWeight: FontWeight.bold)),
-    const SizedBox(height: 18),
-    Expanded(child: GridView.builder(
-      itemCount: 24, gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 4, crossAxisSpacing: 12, mainAxisSpacing: 12),
-      itemBuilder: (context, i) => bubbles.contains(i)
-        ? InkWell(onTap: () => popBubble(i), borderRadius: BorderRadius.circular(50),
-            child: Container(decoration: BoxDecoration(shape: BoxShape.circle, gradient: LinearGradient(colors: [Colors.lightBlueAccent.withValues(alpha:.9), Colors.blue.shade900]), boxShadow: const [BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(2,4))]), child: const Icon(Icons.circle, color: Colors.white24)))
-        : const SizedBox.shrink(),
-    )),
-    if (bubbles.isEmpty) const Text('Great popping! You cleared the board.', style: TextStyle(color: _gold)),
-    const SizedBox(height: 12), FilledButton(onPressed: reset, child: const Text('Play Again')),
+  void _pop(int id){
+    if(!playing||!bubbles.contains(id))return;
+    setState((){
+      bubbles.remove(id);combo++;score+=10+min(combo,10)*2;level=1+score~/250;
+      if(bubbles.isEmpty){bubbles=List.generate(30,(i)=>i);seconds=min(45,seconds+5);}
+    });
+  }
+  void _finish(){
+    if(!playing)return;
+    timer?.cancel();setState((){playing=false;finished=true;});
+    if(!rewarded&&score>=100){rewarded=true;GameMelaBackend.claimReward('bubble_pop',score);GameMelaBackend.saveProgress('bubble_pop',score);GameMelaAds.gameFinished();}
+  }
+  @override void dispose(){timer?.cancel();super.dispose();}
+  @override Widget build(BuildContext context)=>_GameScaffold('Bubble Pop',Column(children:[
+    Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+      _bubbleHud('SCORE',score.toString()),_bubbleHud('TIME',seconds.toString()+'s'),_bubbleHud('COMBO','x'+combo.toString()),_bubbleHud('LEVEL',level.toString())]),
+    const SizedBox(height:12),
+    Expanded(child:Container(padding:const EdgeInsets.all(12),decoration:BoxDecoration(borderRadius:BorderRadius.circular(24),gradient:const LinearGradient(begin:Alignment.topLeft,end:Alignment.bottomRight,colors:[Color(0xFF10264B),Color(0xFF251747)]),border:Border.all(color:Colors.cyanAccent.withValues(alpha:.3))),child:GridView.builder(
+      itemCount:bubbles.length,gridDelegate:const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount:5,crossAxisSpacing:9,mainAxisSpacing:9),
+      itemBuilder:(c,i){final id=bubbles[i];final color=_colors[(id*7+level)%_colors.length];return GestureDetector(onTap:()=>_pop(id),child:DecoratedBox(decoration:BoxDecoration(shape:BoxShape.circle,gradient:RadialGradient(colors:[Colors.white.withValues(alpha:.9),color,color.withValues(alpha:.65)],stops:const[0,.18,1]),boxShadow:[BoxShadow(color:color.withValues(alpha:.5),blurRadius:13,spreadRadius:1)]),child:const Center(child:Icon(Icons.circle_outlined,color:Colors.white70,size:34))));},
+    ))),
+    const SizedBox(height:12),
+    if(finished)Text('TIME UP  •  FINAL SCORE '+score.toString(),style:const TextStyle(color:_gold,fontWeight:FontWeight.w900,fontSize:17)),
+    Row(children:[Expanded(child:Text(playing?'Tap bubbles fast. Build a combo to score more!':'Round complete — play another round',style:const TextStyle(color:Colors.white60,fontSize:12))),FilledButton.icon(onPressed:_reset,icon:const Icon(Icons.replay),label:const Text('PLAY'))]),
   ]));
 }
+Widget _bubbleHud(String label,String value)=>Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:9),decoration:BoxDecoration(color:_panel,borderRadius:BorderRadius.circular(13),border:Border.all(color:Colors.white12)),child:Column(children:[Text(label,style:const TextStyle(color:Colors.white54,fontSize:9,fontWeight:FontWeight.bold)),Text(value,style:const TextStyle(color:_gold,fontSize:16,fontWeight:FontWeight.w900))]));
 
 class QuizGame extends StatefulWidget {
   const QuizGame({super.key});
@@ -185,20 +194,87 @@ class RaceGame extends StatefulWidget {
   @override State<RaceGame> createState()=>_RaceGameState();
 }
 class _RaceGameState extends State<RaceGame>{
-  int lane=1,score=0,coins=0; bool running=false,crashed=false,rewarded=false; Timer? timer; final obstacles=<int>[];
-  void start(){timer?.cancel();setState((){lane=1;score=0;coins=0;obstacles.clear();running=true;crashed=false;rewarded=false;});timer=Timer.periodic(const Duration(milliseconds:650),(_){if(!mounted)return;setState((){for(var i=0;i<obstacles.length;i++){obstacles[i]-=3;}obstacles.removeWhere((x)=>x<0);if(Random().nextDouble()<.55)obstacles.add(12+Random().nextInt(3));score++;coins=score~/10;if(obstacles.any((x)=>x<=1 && (x%3)==lane)){running=false;crashed=true;timer?.cancel();if(!rewarded&&score>=10){rewarded=true;GameMelaBackend.claimReward(widget.vehicle.toLowerCase()=='bike'?'bike_race':'car_race',score);GameMelaBackend.saveProgress(widget.vehicle.toLowerCase()=='bike'?'bike_race':'car_race',score);GameMelaAds.gameFinished();}}});});}
+  final _rng=Random();final List<_Traffic> traffic=[];
+  Timer? timer;int lane=1,score=0,best=0,level=1;double roadShift=0;
+  bool running=false,crashed=false,paused=false,nitro=false;int nitroTicks=0;
+  static const _colors=[Color(0xFFFF5353),Color(0xFF38C8F2),Color(0xFFAA83FF),Color(0xFFFFB347),Color(0xFFECEFF4)];
+  void start(){
+    timer?.cancel();setState((){lane=1;score=0;level=1;roadShift=0;traffic.clear();running=true;crashed=false;paused=false;nitro=false;nitroTicks=0;});
+    timer=Timer.periodic(const Duration(milliseconds:45),(_)=>_tick());
+  }
+  void _tick(){
+    if(!mounted||!running||paused)return;
+    setState((){
+      final speed=(nitro?8.0:4.0)+level*.35;roadShift=(roadShift+speed*2)%64;
+      for(final t in traffic){t.y+=speed/500;}traffic.removeWhere((t)=>t.y>1.15);
+      if(_rng.nextDouble()<.025+level*.002&&traffic.length<4){final free=[0,1,2].where((l)=>!traffic.any((t)=>t.lane==l&&t.y<.25)).toList();if(free.isNotEmpty)traffic.add(_Traffic(free[_rng.nextInt(free.length)],-.16,_colors[_rng.nextInt(_colors.length)]));}
+      if(nitroTicks>0){nitroTicks--;if(nitroTicks==0)nitro=false;}
+      if(traffic.any((t)=>t.lane==lane&&t.y>.70&&t.y<.90)){
+        running=false;crashed=true;timer?.cancel();
+        if(score>=20){final key=widget.vehicle.toLowerCase()=='bike'?'bike_race':'car_race';GameMelaBackend.claimReward(key,score);GameMelaBackend.saveProgress(key,score);GameMelaAds.gameFinished();}
+      }else{score++;level=1+score~/250;if(score>best)best=score;}
+    });
+  }
+  void move(int d){if(running&&!paused)setState(()=>lane=(lane+d).clamp(0,2));}
+  void boost(){if(running&&!paused&&nitroTicks==0)setState(()=>{nitro=true;nitroTicks=65;});}
   @override void dispose(){timer?.cancel();super.dispose();}
-  @override Widget build(BuildContext context)=>_GameScaffold('${widget.vehicle} Racing',Column(children:[
-    Row(mainAxisAlignment:MainAxisAlignment.spaceAround,children:[Text('Distance: $score',style:const TextStyle(color:_gold)),Text('Coins: $coins',style:const TextStyle(color:_gold))]),
-    const SizedBox(height:16),Expanded(child:GestureDetector(onHorizontalDragEnd:(d)=>setState(()=>lane=(lane+((d.primaryVelocity??0)<0?-1:1)).clamp(0,2).toInt()),child:Container(decoration:BoxDecoration(color:const Color(0xFF202B3A),borderRadius:BorderRadius.circular(20)),child:CustomPaint(painter:_RoadPainter(lane,obstacles),child:const SizedBox.expand())))),
-    const SizedBox(height:12),if(crashed) const Text('Crash! Tap race again.',style:TextStyle(color:Colors.orangeAccent)),
-    FilledButton(onPressed:running?null:start,child:Text(running?'RACING...':'START RACE')),
-    const Text('Swipe left or right to change lanes and avoid traffic.',style:TextStyle(color:Colors.white54,fontSize:12)),
+  @override Widget build(BuildContext context)=>_GameScaffold(widget.vehicle+' Racing',Column(children:[
+    Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+      _raceStat('DISTANCE',score.toString()+'m'),_raceStat('LEVEL',level.toString()),_raceStat('BEST',best.toString()+'m'),
+      IconButton.filledTonal(onPressed:running?()=>setState(()=>paused=!paused):null,icon:Icon(paused?Icons.play_arrow:Icons.pause))]),
+    const SizedBox(height:10),
+    Expanded(child:ClipRRect(borderRadius:BorderRadius.circular(22),child:Stack(fit:StackFit.expand,children:[
+      CustomPaint(painter:_ProRoadPainter(lane,traffic,roadShift,widget.vehicle.toLowerCase()=='bike',nitro)),
+      if(nitro)const Positioned(top:12,right:12,child:Text('⚡ NITRO',style:TextStyle(color:Colors.cyanAccent,fontWeight:FontWeight.w900))),
+      if(!running)Container(color:Colors.black.withValues(alpha:.66),child:Center(child:Column(mainAxisSize:MainAxisSize.min,children:[
+        Icon(crashed?Icons.car_crash:Icons.flag_circle,color:_gold,size:58),const SizedBox(height:8),
+        Text(crashed?'RACE OVER':'READY TO RACE',style:const TextStyle(fontSize:25,fontWeight:FontWeight.w900)),
+        Text(crashed?'Distance '+score.toString()+' m  •  Best '+best.toString()+' m':'Dodge traffic and beat your best distance',style:const TextStyle(color:Colors.white70)),
+        const SizedBox(height:16),FilledButton.icon(onPressed:start,icon:const Icon(Icons.play_arrow),label:Text(crashed?'RACE AGAIN':'START RACE'),style:FilledButton.styleFrom(backgroundColor:_gold,foregroundColor:Colors.black,padding:const EdgeInsets.symmetric(horizontal:25,vertical:13))),
+      ]))),
+      if(paused)Container(color:Colors.black54,child:Center(child:FilledButton.icon(onPressed:()=>setState(()=>paused=false),icon:const Icon(Icons.play_arrow),label:const Text('RESUME')))),
+    ]))),
+    const SizedBox(height:12),
+    Row(children:[Expanded(child:_raceControl(Icons.chevron_left,'LEFT',()=>move(-1))),const SizedBox(width:9),Expanded(child:_raceControl(Icons.chevron_right,'RIGHT',()=>move(1))),const SizedBox(width:9),Expanded(child:_raceControl(Icons.bolt,'NITRO',boost,true))]),
+    const SizedBox(height:6),const Text('Change lanes to dodge traffic • Tap NITRO for a speed burst',style:TextStyle(color:Colors.white54,fontSize:11)),
   ]));
 }
-class _RoadPainter extends CustomPainter{
-  final int lane; final List<int> obstacles;
-  _RoadPainter(this.lane,this.obstacles);
-  @override void paint(Canvas canvas,Size size){final p=Paint()..color=Colors.white24..strokeWidth=3;for(var x=1;x<3;x++){for(var y=0.0;y<size.height;y+=35){canvas.drawLine(Offset(size.width*x/3,y),Offset(size.width*x/3,y+18),p);}}final car=Paint()..color=_gold;final w=size.width/7,h=size.height/10;canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(size.width*(lane+.5)/3-w/2,size.height-h-18,w,h),const Radius.circular(10)),car);final obs=Paint()..color=Colors.redAccent;for(final o in obstacles){final l=o%3;final y=size.height-(o*size.height/15);canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(size.width*(l+.5)/3-w/2,y,w,h),const Radius.circular(8)),obs);}}
-  @override bool shouldRepaint(covariant _RoadPainter old)=>true;
+class _Traffic{int lane;double y;final Color color;_Traffic(this.lane,this.y,this.color);}
+Widget _raceStat(String label,String value)=>Container(padding:const EdgeInsets.symmetric(horizontal:10,vertical:8),decoration:BoxDecoration(color:_panel,borderRadius:BorderRadius.circular(12)),child:Column(children:[Text(label,style:const TextStyle(color:Colors.white54,fontSize:9)),Text(value,style:const TextStyle(color:_gold,fontWeight:FontWeight.w900))]));
+Widget _raceControl(IconData icon,String label,VoidCallback tap,[bool accent=false])=>Material(color:accent?const Color(0xFF12475A):_panel,borderRadius:BorderRadius.circular(14),child:InkWell(onTap:tap,borderRadius:BorderRadius.circular(14),child:Padding(padding:const EdgeInsets.symmetric(vertical:10),child:Column(children:[Icon(icon,color:accent?Colors.cyanAccent:Colors.white,size:24),Text(label,style:TextStyle(fontSize:10,color:accent?Colors.cyanAccent:Colors.white70,fontWeight:FontWeight.bold))]))));
+class _ProRoadPainter extends CustomPainter{
+  final int lane;final List<_Traffic> traffic;final double shift;final bool bike,nitro;
+  _ProRoadPainter(this.lane,this.traffic,this.shift,this.bike,this.nitro);
+  @override void paint(Canvas canvas,Size size){
+    final w=size.width,h=size.height,rect=Offset.zero&size;
+    canvas.drawRect(rect,Paint()..shader=const LinearGradient(colors:[Color(0xFF174D3D),Color(0xFF071D25)],begin:Alignment.topCenter,end:Alignment.bottomCenter).createShader(rect));
+    final road=Path()..moveTo(w*.18,0)..lineTo(w*.82,0)..lineTo(w*.99,h)..lineTo(w*.01,h)..close();
+    canvas.drawPath(road,Paint()..shader=const LinearGradient(colors:[Color(0xFF505967),Color(0xFF202936)],begin:Alignment.topCenter,end:Alignment.bottomCenter).createShader(rect));
+    final edge=Paint()..color=const Color(0xFFFFD166)..strokeWidth=3;
+    canvas.drawLine(Offset(w*.18,0),Offset(w*.01,h),edge);canvas.drawLine(Offset(w*.82,0),Offset(w*.99,h),edge);
+    for(int l=1;l<=2;l++){for(int i=-1;i<12;i++){final y=i*62.0+shift;final p=.7+(y/h).clamp(0.0,1.0)*.6;canvas.drawLine(Offset(w*(.18+l*.213),y),Offset(w*(.18+l*.213),y+28*p),Paint()..color=Colors.white70..strokeWidth=2*p);}}
+    for(int i=0;i<8;i++){final y=((i*93.0+shift*1.6)%(h+40))-20;canvas.drawCircle(Offset(w*.09,y),2.5,Paint()..color=Colors.cyanAccent.withValues(alpha:.5));canvas.drawCircle(Offset(w*.91,y),2.5,Paint()..color=Colors.cyanAccent.withValues(alpha:.5));}
+    for(final t in traffic){final x=w*(.286+t.lane*.214);_vehicle(canvas,Offset(x,h*t.y),w*.135,h*.12,t.color,false);}
+    _vehicle(canvas,Offset(w*(.286+lane*.214),h*.82),w*.15,h*.145,nitro?Colors.cyanAccent:_gold,true,bike:bike);
+  }
+  void _vehicle(Canvas c,Offset p,double w,double h,Color color,bool player,{bool bike=false}){
+    final dark=Paint()..color=const Color(0xFF101722),body=Paint()..color=color,glass=Paint()..color=const Color(0xFFB8F1FF);
+    if(bike){
+      c.drawCircle(Offset(p.dx,p.dy-h*.32),w*.17,dark);c.drawCircle(Offset(p.dx,p.dy+h*.30),w*.17,dark);
+      final frame=Paint()..color=color..strokeWidth=w*.12..strokeCap=StrokeCap.round;
+      c.drawLine(Offset(p.dx,p.dy-h*.28),Offset(p.dx-w*.2,p.dy+h*.13),frame);c.drawLine(Offset(p.dx,p.dy-h*.28),Offset(p.dx+w*.2,p.dy+h*.13),frame);c.drawLine(Offset(p.dx-w*.2,p.dy+h*.13),Offset(p.dx+w*.2,p.dy+h*.13),frame);
+      c.drawCircle(Offset(p.dx,p.dy-h*.08),w*.13,body);c.drawCircle(Offset(p.dx,p.dy-h*.34),w*.07,glass);return;
+    }
+    final bodyRect=Rect.fromCenter(center:p,width:w*.78,height:h*.9);
+    if(player)c.drawOval(Rect.fromCenter(center:Offset(p.dx,p.dy+h*.5),width:w*1.15,height:h*.2),Paint()..color=_gold.withValues(alpha:.5)..maskFilter=const MaskFilter.blur(BlurStyle.normal,8));
+    c.drawRRect(RRect.fromRectAndRadius(bodyRect,Radius.circular(w*.2)),body);
+    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center:Offset(p.dx,p.dy-h*.2),width:w*.57,height:h*.24),Radius.circular(w*.1)),glass);
+    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center:Offset(p.dx,p.dy+h*.18),width:w*.57,height:h*.2),Radius.circular(w*.08)),dark);
+    for(final side in [-1.0,1.0]){for(final yy in [-.25,.25]){c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center:Offset(p.dx+side*w*.4,p.dy+yy*h),width:w*.14,height:h*.22),const Radius.circular(3)),dark);}}
+    final lamp=Paint()..color=Colors.white;
+    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center:Offset(p.dx-w*.23,p.dy-h*.4),width:w*.18,height:h*.06),const Radius.circular(2)),lamp);
+    c.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center:Offset(p.dx+w*.23,p.dy-h*.4),width:w*.18,height:h*.06),const Radius.circular(2)),lamp);
+  }
+  @override bool shouldRepaint(covariant _ProRoadPainter old)=>true;
 }
+
