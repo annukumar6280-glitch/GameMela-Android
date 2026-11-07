@@ -72,6 +72,21 @@ class GameMelaBackend {
     }
   }
 
+  static Future<String> createRewardedAdSession() async {
+    if (!ready || client.auth.currentSession == null) {
+      throw Exception('पहले Garage में अपना account बनाइए या sign in कीजिए।');
+    }
+    final response = await client.functions.invoke(
+      'admob-rewarded-ssv',
+      body: <String, dynamic>{},
+    );
+    final data = response.data;
+    if (response.status != 200 || data is! Map || data['custom_data'] == null) {
+      throw Exception('Rewarded Ad शुरू नहीं हो पाया। थोड़ी देर बाद कोशिश करें।');
+    }
+    return data['custom_data'].toString();
+  }
+
   static Future<List<Map<String, dynamic>>> loadVehicles() async {
     if (!ready) return [];
     final rows = await client.from('garage_vehicles')
