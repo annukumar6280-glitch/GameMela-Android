@@ -141,7 +141,7 @@ func _build_road_surface(width: float, color: Color, lateral_offset: float) -> v
 		vertices.append(Vector3(x + width * 0.5, -0.105, z))
 		if i < segments:
 			var a := i * 2
-			indices.append_array(PackedInt32Array([a, a + 2, a + 1, a + 1, a + 2, a + 3]))
+			indices.append_array(PackedInt32Array([a, a + 1, a + 2, a + 1, a + 3, a + 2]))
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
