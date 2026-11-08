@@ -40,15 +40,10 @@ class GameInfo {
 }
 
 const games = <GameInfo>[
-  GameInfo('Bubble Pop', 'Pop bubbles • Relax & play', '🫧', Color(0xFF38BDF8)),
-  GameInfo('Quiz Challenge', 'Test your knowledge', '🧠', Color(0xFFA78BFA)),
-  GameInfo('Memory Match', 'Match the hidden pairs', '🃏', Color(0xFFF472B6)),
-  GameInfo('Number Puzzle', 'Train your brain', '🔢', Color(0xFF34D399)),
-  GameInfo('Word Puzzle', 'Find the hidden words', '🔤', Color(0xFFFBBF24)),
-  GameInfo('Color Sort', 'Sort colours • Relax your mind', '🧪', Color(0xFF34D399)),
-  GameInfo('Stack Rush', 'Build the tallest tower', '🧱', Color(0xFFFB923C)),
-  GameInfo('Bike Racing', 'Race on two wheels', '🏍️', Color(0xFFFB923C)),
-  GameInfo('Car Racing', 'Own the track', '🏎️', Color(0xFF60A5FA)),
+  GameInfo('Bike', '3D open-road motorcycle simulator', '🏍️', Color(0xFFFB923C)),
+  GameInfo('Car', '3D open-road driving simulator', '🚗', Color(0xFF60A5FA)),
+  GameInfo('Train', '3D railway driving simulator', '🚆', Color(0xFF34D399)),
+  GameInfo('Plane', '3D flight simulator', '✈️', Color(0xFFA78BFA)),
 ];
 
 class HomeScreen extends StatefulWidget {
@@ -132,7 +127,7 @@ class HomeContent extends StatelessWidget {
       const SectionTitle('Your journey', 'More adventures ahead'),
       const SizedBox(height: 12),
       const Row(children: [
-        Expanded(child: StatCard(icon: Icons.sports_esports, label: 'Games', value: '9')),
+        Expanded(child: StatCard(icon: Icons.sports_esports, label: 'Games', value: '4')),
         SizedBox(width: 10),
         Expanded(child: StatCard(icon: Icons.local_fire_department, label: 'Streak', value: '0 days')),
         SizedBox(width: 10),
@@ -506,7 +501,21 @@ class GameCard extends StatelessWidget {
     ]);
     return InkWell(
       borderRadius: BorderRadius.circular(19),
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => gameForTitle(game.title))),
+      onTap: () async {
+        if (game.title == 'Bike') {
+          try {
+            await _bikeSimulatorChannel.invokeMethod<void>('launchBikeSimulator');
+          } catch (error) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('3D Bike Simulator could not open: $error')),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${game.title} का 3D simulator अभी development में है।')),
+          );
+        }
+      },
       child: Container(
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(color: panel, borderRadius: BorderRadius.circular(19),
