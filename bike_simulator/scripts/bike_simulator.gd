@@ -35,6 +35,11 @@ var horn_audio: AudioStreamPlayer
 var gear_label: Label
 var mission_label: Label
 var mission_target := 500.0
+var fuel := 100.0
+var passenger_onboard := false
+var fuel_label: Label
+var passenger_label: Label
+var passenger_visual: Node3D
 
 func _ready() -> void:
 	rng.randomize()
@@ -65,6 +70,10 @@ func _process(delta: float) -> void:
 	bike_root.position.x = clampf(bike_root.position.x + steer * (2.9 + speed * 0.035) * delta, -5.4, 5.4)
 	bike_visual.rotation.z = lerpf(bike_visual.rotation.z, -steer * 0.22, 7.0 * delta)
 	distance += speed * delta
+	fuel = maxf(0.0, fuel - speed * delta * 0.0018)
+	if fuel <= 0.0:
+		speed = move_toward(speed, 0.0, BRAKING * delta)
+		status_label.text = "FUEL EMPTY  •  REFUEL AT STATION"
 	_update_road(delta)
 	_update_traffic(delta)
 	_update_camera(delta)
@@ -73,6 +82,8 @@ func _process(delta: float) -> void:
 	distance_label.text = "DISTANCE  %04d m" % int(distance)
 	gear_label.text = "GEAR  %d" % gear
 	mission_label.text = "MISSION  %d / %d m" % [mini(int(distance), int(mission_target)), int(mission_target)]
+	fuel_label.text = "FUEL  %d%%" % int(fuel)
+	passenger_label.text = "PASSENGER  %s" % ("ONBOARD" if passenger_onboard else "NONE")
 	if distance >= mission_target:
 		mission_target += 500.0
 		status_label.text = "MISSION COMPLETE  •  + NEXT 500 m"
@@ -97,22 +108,75 @@ func _build_world() -> void:
 	sun.light_energy = 1.35
 	sun.shadow_enabled = true
 	add_child(sun)
-	_add_box("Road", Vector3(ROAD_WIDTH, 0.18, ROAD_LENGTH), Vector3(0, -0.12, -ROAD_LENGTH * 0.46), Color(0.105, 0.12, 0.14))
-	_add_box("Left shoulder", Vector3(2.0, 0.2, ROAD_LENGTH), Vector3(-8.0, -0.1, -ROAD_LENGTH * 0.46), Color(0.34, 0.31, 0.24))
-	_add_box("Right shoulder", Vector3(2.0, 0.2, ROAD_LENGTH), Vector3(8.0, -0.1, -ROAD_LENGTH * 0.46), Color(0.34, 0.31, 0.24))
-	_add_box("Left verge", Vector3(80, 0.25, ROAD_LENGTH), Vector3(-49, -0.22, -ROAD_LENGTH * 0.46), Color(0.20, 0.39, 0.19))
-	_add_box("Right verge", Vector3(80, 0.25, ROAD_LENGTH), Vector3(49, -0.22, -ROAD_LENGTH * 0.46), Color(0.20, 0.39, 0.19))
-	for side in [-1.0, 1.0]:
-		_add_box("Road edge", Vector3(0.16, 0.025, ROAD_LENGTH), Vector3(side * 6.65, 0.0, -ROAD_LENGTH * 0.46), Color(0.94, 0.91, 0.78))
+	_add_box("Landscape ground", Vector3(180, 0.3, ROAD_LENGTH), Vector3(0, -0.28, -ROAD_LENGTH * 0.46), Color(0.12, 0.31, 0.16))
+	_build_road_surface(ROAD_WIDTH, Color(0.105, 0.12, 0.14), 0.0)
+	_build_road_surface(0.18, Color(0.96, 0.82, 0.34), -6.8)
+	_build_road_surface(0.18, Color(0.96, 0.82, 0.34), 6.8)
 	for i in range(32):
-		var mark := _add_box("Lane dash", Vector3(0.13, 0.025, 7.0), Vector3(0, 0.015, -i * 18.0), Color(0.95, 0.88, 0.58))
+		var z := -float(i) * 18.0 - 5.0
+		var mark := _add_box("Lane dash", Vector3(0.13, 0.025, 7.0), Vector3(_road_center(z), 0.015, z), Color(0.88, 0.88, 0.82))
 		road_marks.append(mark)
+	_build_fuel_station(Vector3(_road_center(-250.0) + 19.0, 0, -250.0))
+	_build_passenger_stop(Vector3(_road_center(-410.0) - 18.0, 0, -410.0))
 	for i in range(42):
 		var z := -float(i) * 14.0 - 8.0
+		var road_x := _road_center(z)
 		for side in [-1.0, 1.0]:
-			_build_tree(Vector3(side * rng.randf_range(13.0, 27.0), 0, z))
+			_build_tree(Vector3(road_x + side * rng.randf_range(13.0, 27.0), 0, z))
 			if i % 3 == 0:
-				_build_house(Vector3(side * rng.randf_range(28.0, 43.0), 0, z - 3.0))
+				_build_house(Vector3(road_x + side * rng.randf_range(28.0, 43.0), 0, z - 3.0))
+
+func _road_center(z: float) -> float:
+	var forward := -z
+	return sin(forward * 0.010) * 7.5 + sin(forward * 0.022 + 0.8) * 2.2
+
+func _build_road_surface(width: float, color: Color, lateral_offset: float) -> void:
+	var vertices := PackedVector3Array()
+	var indices := PackedInt32Array()
+	var segments := 124
+	for i in range(segments + 1):
+		var z := -float(i) * (ROAD_LENGTH / float(segments))
+		var x := _road_center(z) + lateral_offset
+		vertices.append(Vector3(x - width * 0.5, -0.105, z))
+		vertices.append(Vector3(x + width * 0.5, -0.105, z))
+		if i < segments:
+			var a := i * 2
+			indices.append_array(PackedInt32Array([a, a + 2, a + 1, a + 1, a + 2, a + 3]))
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_INDEX] = indices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var road_node := MeshInstance3D.new()
+	road_node.mesh = mesh
+	road_node.material_override = _material(color)
+	add_child(road_node)
+
+func _build_fuel_station(pos: Vector3) -> void:
+	var station := Node3D.new()
+	station.position = pos
+	add_child(station)
+	_add_mesh(station, BoxMesh.new(), Vector3(0, 0.12, 0), Vector3(13, 0.24, 10), Color(0.38, 0.40, 0.39))
+	_add_mesh(station, BoxMesh.new(), Vector3(0, 4.1, 0), Vector3(10, 0.45, 7), Color(0.92, 0.12, 0.07))
+	for x in [-4.2, 4.2]:
+		for z in [-2.7, 2.7]:
+			_add_mesh(station, BoxMesh.new(), Vector3(x, 2.0, z), Vector3(0.28, 4.0, 0.28), Color(0.84, 0.84, 0.78))
+	for x in [-2.2, 2.2]:
+		_add_mesh(station, BoxMesh.new(), Vector3(x, 1.0, 0), Vector3(0.9, 1.8, 0.7), Color(0.92, 0.92, 0.88))
+		_add_mesh(station, BoxMesh.new(), Vector3(x, 1.85, -0.05), Vector3(0.55, 0.25, 0.08), Color(0.08, 0.18, 0.2))
+
+func _build_passenger_stop(pos: Vector3) -> void:
+	var stop := Node3D.new()
+	stop.position = pos
+	add_child(stop)
+	_add_mesh(stop, BoxMesh.new(), Vector3(0, 0.12, 0), Vector3(8, 0.24, 5), Color(0.42, 0.43, 0.40))
+	_add_mesh(stop, BoxMesh.new(), Vector3(0, 2.5, -1.5), Vector3(7, 0.22, 3), Color(0.10, 0.35, 0.62))
+	for x in [-3.0, 3.0]:
+		_add_mesh(stop, BoxMesh.new(), Vector3(x, 1.25, -1.5), Vector3(0.18, 2.5, 0.18), Color(0.72, 0.74, 0.76))
+	_add_mesh(stop, BoxMesh.new(), Vector3(0, 0.75, 1.4), Vector3(3.5, 0.25, 0.6), Color(0.35, 0.20, 0.12))
+	_add_mesh(stop, SphereMesh.new(), Vector3(0, 1.55, 0.3), Vector3(0.36, 0.36, 0.36), Color(0.78, 0.58, 0.42))
+	_add_mesh(stop, CapsuleMesh.new(), Vector3(0, 0.85, 0.3), Vector3(0.42, 0.8, 0.3), Color(0.12, 0.25, 0.68))
 
 func _build_tree(pos: Vector3) -> void:
 	var tree := Node3D.new()
@@ -212,6 +276,17 @@ func _build_hud() -> void:
 	_add_action_button(layer, "GEAR -", Vector2(-326, -215), Vector2(96, 62), func(): gear = maxi(gear - 1, 1))
 	_add_action_button(layer, "HORN", Vector2(-110, -215), Vector2(96, 62), func(): horn_audio.play())
 	_add_action_button(layer, "CAMERA", Vector2(-4, -215), Vector2(96, 62), func(): first_person = not first_person)
+	fuel_label = Label.new()
+	fuel_label.position = Vector2(190, 64)
+	fuel_label.add_theme_font_size_override("font_size", 16)
+	fuel_label.add_theme_color_override("font_color", Color(1.0, 0.82, 0.28))
+	layer.add_child(fuel_label)
+	passenger_label = Label.new()
+	passenger_label.position = Vector2(190, 88)
+	passenger_label.add_theme_font_size_override("font_size", 15)
+	layer.add_child(passenger_label)
+	_add_action_button(layer, "REFUEL", Vector2(-326, -285), Vector2(96, 58), _refuel_bike)
+	_add_action_button(layer, "PICKUP", Vector2(-220, -285), Vector2(96, 58), _pickup_passenger)
 
 func _add_control_button(layer: CanvasLayer, caption: String, offset: Vector2, size: Vector2, action: String) -> void:
 	var button := Button.new()
@@ -282,6 +357,35 @@ func _make_tone(frequency: float, seconds: float, looping: bool) -> AudioStreamW
 		stream.loop_end = count
 	return stream
 
+func _refuel_bike() -> void:
+	if speed > 1.0:
+		status_label.text = "STOP THE BIKE TO REFUEL"
+		return
+	if distance < 200.0 or distance > 300.0:
+		status_label.text = "REACH THE FUEL STATION FIRST"
+		return
+	fuel = 100.0
+	status_label.text = "FUEL TANK FULL"
+
+func _pickup_passenger() -> void:
+	if speed > 1.0:
+		status_label.text = "STOP TO PICK UP PASSENGER"
+		return
+	if distance < 360.0 or distance > 450.0:
+		status_label.text = "REACH THE PASSENGER STOP FIRST"
+		return
+	passenger_onboard = not passenger_onboard
+	if passenger_onboard:
+		passenger_visual = Node3D.new()
+		bike_visual.add_child(passenger_visual)
+		_add_mesh(passenger_visual, CapsuleMesh.new(), Vector3(0, 2.0, -0.95), Vector3(0.38, 0.7, 0.34), Color(0.12, 0.42, 0.28))
+		_add_mesh(passenger_visual, SphereMesh.new(), Vector3(0, 2.55, -0.95), Vector3(0.34, 0.34, 0.34), Color(0.78, 0.58, 0.42))
+		status_label.text = "PASSENGER BOARDED"
+	else:
+		if is_instance_valid(passenger_visual):
+			passenger_visual.queue_free()
+		status_label.text = "PASSENGER DROPPED OFF"
+
 func _set_touch(action: String, value: bool) -> void:
 	match action:
 		"left": left_touch = value
@@ -289,12 +393,9 @@ func _set_touch(action: String, value: bool) -> void:
 		"brake": brake_touch = value
 		"throttle": throttle_touch = value
 
-func _update_road(delta: float) -> void:
-	var movement := maxf(speed, 4.0) * delta
+func _update_road(_delta: float) -> void:
 	for mark in road_marks:
-		mark.position.z += movement
-		if mark.position.z > 12.0:
-			mark.position.z -= 32.0 * 18.0
+		mark.position.x = _road_center(mark.position.z)
 
 func _spawn_traffic(count: int) -> void:
 	for i in range(count):
